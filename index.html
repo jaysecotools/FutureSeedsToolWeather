@@ -1,8 +1,5 @@
 <!-- Developed by Jay Rowley for TasTAFE Future Seeds Program 2026 -->
 
-<!-- Automatic weather loading capability added. Requires testing. -->
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -140,6 +137,23 @@
             margin-left: 5px;
             text-transform: uppercase;
         }
+        .new-badge {
+            background: #f0c34a;
+            color: #1f4a1f;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 30px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
+            display: inline-block;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background: #ffd966; }
+            100% { transform: scale(1); }
+        }
         .region-bar {
             background: #31754a;
             padding: 1rem 2.5rem;
@@ -154,8 +168,6 @@
             align-items: center;
             gap: 20px;
             flex-wrap: wrap;
-            flex: 2;
-            min-width: 400px;
         }
         .selector-group label {
             font-weight: 700;
@@ -195,8 +207,6 @@
             align-items: center;
             position: relative;
             flex-wrap: wrap;
-            flex: 1;
-            min-width: 350px;
         }
         .location-options label {
             color: #fcf1b5;
@@ -620,6 +630,55 @@
             text-align: center;
             transition: all 0.3s ease;
         }
+        .weather-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: #e8f0da;
+            padding: 1rem 1.5rem;
+            border-radius: 60px;
+        }
+        .weather-auto-btn {
+            background: #4a90e2;
+            color: white;
+            border: 3px solid #f5c542;
+            border-radius: 50px;
+            padding: 12px 25px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+        }
+        .weather-auto-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 0 #2a5080;
+            background: #5a9ef2;
+        }
+        .weather-auto-btn:active {
+            transform: translateY(0);
+        }
+        .weather-auto-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .weather-auto-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .weather-source {
+            font-size: 0.85rem;
+            color: #1f5c33;
+            background: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            display: inline-block;
+        }
         .photo-section {
             margin: 1.5rem 0;
             padding: 1rem;
@@ -1030,47 +1089,35 @@
             margin-top: 5px;
             font-style: italic;
         }
-        /* Styles for custom species input - made more prominent */
+        /* Styles for custom species input */
         .species-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-            background: #22663a;
-            padding: 8px 15px;
-            border-radius: 60px;
-            margin-top: 5px;
-            width: 100%;
-        }
-        .custom-species-input {
             display: flex;
             gap: 8px;
             align-items: center;
-            background: #f6f9ed;
-            padding: 10px 15px;
-            border-radius: 60px;
-            margin-top: 10px;
-            border: 2px solid #f5c542;
+            flex-wrap: wrap;
+        }
+        .custom-species-input {
+            display: flex;
+            gap: 5px;
+            align-items: center;
         }
         .custom-species-input input {
             border: 2px solid #a5b77a;
             border-radius: 50px;
-            padding: 10px 15px;
-            font-size: 1rem;
-            min-width: 250px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            min-width: 180px;
         }
         .add-species-btn {
             background: #4a90e2;
             border: none;
             border-radius: 50px;
-            padding: 10px 20px;
+            padding: 8px 15px;
             color: white;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             white-space: nowrap;
-            font-size: 0.95rem;
-            border: 2px solid #f5c542;
         }
         .add-species-btn:hover {
             transform: translateY(-2px);
@@ -1081,14 +1128,13 @@
             background: #d16b4b;
             border: none;
             border-radius: 50px;
-            padding: 10px 20px;
+            padding: 8px 15px;
             color: white;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-left: 5px;
             white-space: nowrap;
-            font-size: 0.95rem;
-            border: 2px solid #f5c542;
         }
         .remove-species-btn:hover {
             transform: translateY(-2px);
@@ -1101,21 +1147,6 @@
             gap: 8px;
             width: 100%;
         }
-        .species-label {
-            font-size: 1.1rem;
-            color: #fffde4;
-            font-weight: 700;
-            margin-right: 10px;
-        }
-        .custom-badge {
-            background: #f5c542;
-            color: #1f4a1f;
-            padding: 3px 10px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            margin-left: 8px;
-        }
     </style>
 </head>
 <body>
@@ -1125,7 +1156,7 @@
             🌱 FUTURE SEEDS PROGRAM 
             <span>DATA COLLECTOR</span>
         </h1>
-        <div class="program-badge">⚡ interactive map · quick region · camera ready · data import · custom species</div>
+        <div class="program-badge">⚡ interactive map · quick region · camera ready · data import · auto weather <span class="new-badge">NEW</span></div>
     </div>
 
     <!-- Instructions Toggle (formerly User Guide) -->
@@ -1182,9 +1213,12 @@
                 </ul>
             </div>
             <div class="guide-step">
-                <h3>🌡️ 7. Weather Data <span class="optional-badge">optional</span></h3>
+                <h3>🌡️ 7. Weather Data <span class="optional-badge">optional · NEW auto-load</span></h3>
                 <ul>
-                    <li>Look up BOM data for your location</li>
+                    <li><strong>Auto-load weather:</strong> Click "🌤️ Auto-load Current Weather" button</li>
+                    <li>Uses Open-Meteo (free, no API key required)</li>
+                    <li>Automatically loads when you click the map or use "My Location"</li>
+                    <li>Or manually enter BOM data for your location</li>
                     <li>Enter ACTUAL min/max temperatures</li>
                     <li>Station name and ID optional but helpful</li>
                 </ul>
@@ -1204,8 +1238,7 @@
                     <li>Export as JSON, Excel, or CSV</li>
                     <li><strong>Import Data:</strong> Load previously exported JSON</li>
                     <li>Edit or delete existing records</li>
-                    <li><strong>➕ Add Species:</strong> Click the "+ Add Species" button to add custom species</li>
-                    <li><strong>🗑️ Remove Species:</strong> Select a custom species and click "Remove" to delete it</li>
+                    <li><strong>NEW:</strong> Add custom species using the + button</li>
                 </ul>
             </div>
         </div>
@@ -1213,10 +1246,10 @@
 
     <div class="region-bar">
         <div class="selector-group">
-            <span class="species-label">🌿 SPECIES:</span>
+            <label>🌿 Species:</label>
             <div class="species-dropdown-container">
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <select id="speciesSelect" onchange="updateSpeciesInfo()" style="flex: 2; min-width: 300px;">
+                <div class="species-controls">
+                    <select id="speciesSelect" onchange="updateSpeciesInfo()">
                         <option value="Acacia verticillata"><i>Acacia verticillata</i> (Prickly Moses) — TEST SPECIES</option>
                         <option value="Acacia dealbata"><i>Acacia dealbata</i> (Silver Wattle)</option>
                         <option value="Banksia marginata"><i>Banksia marginata</i> (Silver Banksia)</option>
@@ -1224,15 +1257,12 @@
                         <option value="Nothofagus cunninghamii"><i>Nothofagus cunninghamii</i> (Myrtle Beech)</option>
                     </select>
                     <button class="add-species-btn" onclick="showAddSpeciesPrompt()">➕ Add Species</button>
-                    <button class="remove-species-btn" onclick="removeCustomSpecies()" id="removeSpeciesBtn" style="display: none;">🗑️ Remove Selected</button>
+                    <button class="remove-species-btn" onclick="removeCustomSpecies()" id="removeSpeciesBtn" style="display: none;">🗑️ Remove</button>
                 </div>
-                <div id="customSpeciesInput" style="display: none;" class="custom-species-input">
-                    <input type="text" id="newSpeciesName" placeholder="Enter scientific name (e.g., Eucalyptus globulus)">
-                    <button class="add-species-btn" onclick="addCustomSpecies()">💾 Save Species</button>
-                    <button class="btn" onclick="cancelAddSpecies()" style="padding: 10px 20px; background: #8a6e4b; color: white;">✖ Cancel</button>
-                </div>
-                <div style="margin-top: 5px; font-size: 0.9rem; color: #fcf1b5;">
-                    <span class="custom-badge">NEW</span> Click "+ Add Species" to add your own species (saved automatically)
+                <div class="custom-species-input" id="customSpeciesInput" style="display: none;">
+                    <input type="text" id="newSpeciesName" placeholder="Enter species name (e.g., Eucalyptus globulus)">
+                    <button class="add-species-btn" onclick="addCustomSpecies()">Save</button>
+                    <button class="btn" onclick="cancelAddSpecies()" style="padding: 8px 15px;">Cancel</button>
                 </div>
             </div>
         </div>
@@ -1391,10 +1421,23 @@
             <!-- RIGHT: SEED + FIRE + MANUAL WEATHER -->
             <div>
                 <div class="data-card">
-                    <h2>🌡️ WEATHER DATA <span class="optional-badge">optional</span></h2>
+                    <h2>🌡️ WEATHER DATA 
+                        <span class="optional-badge">optional</span>
+                        <span class="new-badge">AUTO WEATHER</span>
+                    </h2>
+                    
+                    <!-- AUTO WEATHER CONTROLS -->
+                    <div class="weather-controls">
+                        <button class="weather-auto-btn" onclick="loadCurrentWeather()" id="autoWeatherBtn">
+                            <span>🌤️</span> Auto-load Current Weather
+                        </button>
+                        <span class="weather-source">
+                            Powered by Open-Meteo <span style="color: #4a90e2;">⚡ No API key required</span>
+                        </span>
+                    </div>
                     
                     <div class="weather-note">
-                        🔍 Look up BOM data for your location and enter actual monthly values
+                        🔍 Look up BOM data for your location and enter actual monthly values, or use the auto-load button above
                     </div>
                     
                     <div class="field-grid">
@@ -1422,7 +1465,7 @@
                     </div>
                     
                     <div class="temp-note">
-                        ⏱️ Enter ACTUAL recorded min/max for this collection month (optional)
+                        ⏱️ Enter ACTUAL recorded min/max for this collection month, or click auto-load above
                     </div>
 
                     <div style="margin-top: 2rem;">
@@ -1485,17 +1528,17 @@
             </div>
         </div>
 
-        <!-- OUTPUT PREVIEW - Commented out for now but may be reinstated
+        <!-- OUTPUT PREVIEW -->
         <div class="output-box" id="outputBox">
-            ⏺ Dataset preview will appear here. Capture data to begin.
-        </div> -->
+            ⏺ Dataset preview will appear here. Capture data to begin. Try the new auto-weather button!
+        </div>
 
-        <div class="weather-credit">Enter actual BOM observations for correlation analysis (optional)</div>
+        <div class="weather-credit">🌤️ Auto-weather powered by Open-Meteo (free, no API key) · Enter actual BOM observations for correlation analysis (optional)</div>
     </div>
 
     <!-- Footer -->
     <div style="background: #1a5830; color: #f6f9ed; padding: 1rem 2.5rem; text-align: center; border-top: 3px solid #f5c542; font-size: 0.9rem; border-radius: 0 0 36px 36px;">
-        <p>🌱 Future Seeds Program · Tasmania · Field Data Collection Tool </p>
+        <p>🌱 Future Seeds Program · Tasmania · Field Data Collection Tool · Now with Auto Weather! <span class="new-badge">NEW</span></p>
         <p style="font-size: 0.8rem; margin-top: 0.3rem; opacity: 0.8;">Developed by Jay Rowley for TasTAFE Future Seeds Program 2026</p>
     </div>
 </div>
@@ -1568,6 +1611,107 @@
     let map;
     let marker;
 
+    // NEW: Auto-weather loading function
+    async function loadCurrentWeather() {
+        const lat = document.getElementById('lat').value;
+        const lon = document.getElementById('lon').value;
+        const autoBtn = document.getElementById('autoWeatherBtn');
+        const originalText = autoBtn.innerHTML;
+        
+        try {
+            // Show loading state
+            autoBtn.innerHTML = '<span>⏳</span> Loading weather...';
+            autoBtn.disabled = true;
+            document.getElementById('outputBox').innerText = '🌤️ Loading weather data from Open-Meteo...';
+            
+            // Open-Meteo API - no API key required
+            const response = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=temperature_2m_min,temperature_2m_max&timezone=auto`
+            );
+            
+            if (!response.ok) {
+                throw new Error('Weather service temporarily unavailable');
+            }
+            
+            const data = await response.json();
+            
+            if (data.current && data.daily) {
+                // Fill in the weather fields
+                const minTemp = data.daily.temperature_2m_min[0];
+                const maxTemp = data.daily.temperature_2m_max[0];
+                
+                document.getElementById('actualMinTemp').value = minTemp.toFixed(1);
+                document.getElementById('actualMaxTemp').value = maxTemp.toFixed(1);
+                
+                // Add station info
+                const weatherDescription = getWeatherDescription(data.current.weather_code);
+                document.getElementById('bomStation').value = `Open-Meteo - ${weatherDescription} (${data.timezone})`;
+                
+                // Update display
+                updateTempDisplay();
+                
+                // Show success message with current conditions
+                document.getElementById('outputBox').innerText = 
+                    `✅ Weather loaded successfully!\n` +
+                    `📍 Location: ${lat}, ${lon}\n` +
+                    `🌡️ Current: ${data.current.temperature_2m}°C\n` +
+                    `📊 Today's range: ${minTemp.toFixed(1)}°C - ${maxTemp.toFixed(1)}°C\n` +
+                    `☁️ Conditions: ${weatherDescription}\n` +
+                    `💧 Humidity: ${data.current.relative_humidity_2m}%\n` +
+                    `⚡ Data from Open-Meteo (free, no API key)`;
+            } else {
+                throw new Error('Invalid weather data received');
+            }
+        } catch (error) {
+            console.error('Weather fetch failed:', error);
+            document.getElementById('outputBox').innerText = '❌ Failed to load weather data. Please try again or enter manually.';
+            
+            // Show more specific error message
+            if (error.message.includes('Failed to fetch')) {
+                document.getElementById('outputBox').innerText += ' Network connection issue.';
+            }
+        } finally {
+            // Restore button state
+            autoBtn.innerHTML = originalText;
+            autoBtn.disabled = false;
+        }
+    }
+
+    // Helper function to get weather description from WMO code
+    function getWeatherDescription(code) {
+        const weatherCodes = {
+            0: 'Clear sky',
+            1: 'Mainly clear',
+            2: 'Partly cloudy',
+            3: 'Overcast',
+            45: 'Fog',
+            48: 'Rime fog',
+            51: 'Light drizzle',
+            53: 'Moderate drizzle',
+            55: 'Dense drizzle',
+            56: 'Freezing drizzle',
+            57: 'Dense freezing drizzle',
+            61: 'Slight rain',
+            63: 'Moderate rain',
+            65: 'Heavy rain',
+            66: 'Freezing rain',
+            67: 'Heavy freezing rain',
+            71: 'Slight snow',
+            73: 'Moderate snow',
+            75: 'Heavy snow',
+            77: 'Snow grains',
+            80: 'Slight rain showers',
+            81: 'Moderate rain showers',
+            82: 'Violent rain showers',
+            85: 'Slight snow showers',
+            86: 'Heavy snow showers',
+            95: 'Thunderstorm',
+            96: 'Thunderstorm with hail',
+            99: 'Heavy thunderstorm with hail'
+        };
+        return weatherCodes[code] || 'Unknown conditions';
+    }
+
     // NEW: Initialize species dropdown
     function initializeSpeciesDropdown() {
         const select = document.getElementById('speciesSelect');
@@ -1585,7 +1729,7 @@
         customSpecies.forEach(species => {
             const option = document.createElement('option');
             option.value = species;
-            option.innerHTML = species + ' (Custom)';
+            option.innerHTML = `<i>${species}</i> (Custom)`;
             select.appendChild(option);
         });
         
@@ -1609,7 +1753,6 @@
     // NEW: Show add species input
     function showAddSpeciesPrompt() {
         document.getElementById('customSpeciesInput').style.display = 'flex';
-        document.getElementById('newSpeciesName').focus();
     }
 
     // NEW: Cancel adding species
@@ -1649,9 +1792,6 @@
         
         // Hide input
         cancelAddSpecies();
-        
-        // Show success message
-        document.getElementById('outputBox').innerText = `✅ Added "${newSpecies}" to species list`;
     }
 
     // NEW: Remove custom species
@@ -1675,8 +1815,6 @@
             // Select first default species
             select.value = defaultSpecies[0].value;
             updateSpeciesInfo();
-            
-            document.getElementById('outputBox').innerText = `✅ Removed "${currentValue}" from species list`;
         }
     }
 
@@ -1767,6 +1905,9 @@
                 enableMapMode();
                 
                 document.getElementById('outputBox').innerText = `📍 Location captured: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                
+                // Auto-load weather for this location
+                setTimeout(() => loadCurrentWeather(), 500);
             },
             (error) => {
                 let errorMessage = 'Location error: ';
@@ -1846,9 +1987,13 @@
         
         if (fromMap) {
             document.getElementById('coordSource').value = 'Map selection';
+            // Auto-load weather when map location is set
+            setTimeout(() => loadCurrentWeather(), 500);
         } else {
             const region = document.getElementById('regionSelect').value;
             document.getElementById('coordSource').value = `Quick Region (${regionPresets[region].name})`;
+            // Optionally load weather for region too
+            setTimeout(() => loadCurrentWeather(), 500);
         }
     }
 
@@ -1910,7 +2055,7 @@
         if (defaultSpeciesObj) {
             displayName = defaultSpeciesObj.display;
         } else {
-            displayName = `🌱 <i>${species}</i> (Custom Species)`;
+            displayName = `🌱 <i>${species}</i> (Custom)`;
         }
         
         document.getElementById('speciesDisplay').innerHTML = displayName;
@@ -2314,7 +2459,7 @@
             return `
                 <div class="record-card" onclick="selectRecord(${index})">
                     <div class="record-date">📅 ${record.collectionDate}</div>
-                    <div class="record-species">🌿 ${record.species}</div>
+                    <div class="record-species">🌿 <i>${record.species ? record.species.split(' ')[0] : ''} ${record.species ? record.species.split(' ')[1] || '' : ''}</i></div>
                     <div class="record-location">📍 ${record.location ? record.location.region : 'Unknown'}</div>
                     ${record.weather && record.weather.minTemp && record.weather.maxTemp ? 
                         `<div class="record-weather">🌡️ ${record.weather.minTemp}°C / ${record.weather.maxTemp}°C</div>` : ''}
