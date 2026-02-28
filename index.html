@@ -1390,7 +1390,7 @@
                                 📷 Take Photo Now
                             </button>
                             
-                            <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+                            <input type="file" id="cameraInput" accept="image/*" style="display: none;">
                             
                             <button class="btn" onclick="document.getElementById('photoInput').click()" style="background: #8a6e4b; color: white; padding: 10px 20px;">
                                 🖼️ Choose from Gallery
@@ -1607,7 +1607,7 @@
         }
     };
 
-    // Photo handling
+    // Photo handling - can be File objects or stored photo objects with data URL
     let selectedPhotos = [];
 
     // Initialize map
@@ -1651,6 +1651,12 @@
 
     // Auto-weather loading function
     async function loadCurrentWeather(showFeedback = true) {
+        // Clear any pending timeout
+        if (weatherLoadTimeout) {
+            clearTimeout(weatherLoadTimeout);
+            weatherLoadTimeout = null;
+        }
+        
         // Prevent multiple simultaneous loads
         if (isLoadingWeather) {
             console.log('Weather load already in progress');
@@ -1661,12 +1667,6 @@
         const lon = document.getElementById('lon').value;
         const autoBtn = document.getElementById('autoWeatherBtn');
         const originalText = autoBtn ? autoBtn.innerHTML : '<span>🌤️</span> Auto-load Current Weather';
-        
-        // Clear any pending timeout
-        if (weatherLoadTimeout) {
-            clearTimeout(weatherLoadTimeout);
-            weatherLoadTimeout = null;
-        }
         
         try {
             isLoadingWeather = true;
@@ -1904,7 +1904,12 @@
             mapEl.classList.add('show');
             showBtn.classList.add('active');
             hideBtn.classList.remove('active');
-            setTimeout(() => map.invalidateSize(), 100);
+            // Ensure map is properly sized
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+            }, 100);
         } else {
             mapEl.classList.remove('show');
             showBtn.classList.remove('active');
@@ -2009,7 +2014,12 @@
     // Reverse geocoding
     function reverseGeocode(lat, lng) {
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Geocoding service error');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.display_name) {
                     const locationParts = [];
@@ -2023,7 +2033,10 @@
                     }
                 }
             })
-            .catch(error => console.log('Reverse geocoding failed:', error));
+            .catch(error => {
+                console.log('Reverse geocoding failed:', error);
+                // Don't show error to user - this is a nice-to-have feature
+            });
     }
 
     // Initialize map
@@ -2158,17 +2171,25 @@
     // Open camera
     function openCamera() {
         const cameraInput = document.getElementById('cameraInput');
-        cameraInput.setAttribute('capture', 'environment');
+        
+        // For mobile devices, try to use the rear camera
+        if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            cameraInput.setAttribute('capture', 'environment');
+        } else {
+            cameraInput.removeAttribute('capture');
+        }
+        
         cameraInput.setAttribute('accept', 'image/*');
         cameraInput.value = '';
         cameraInput.click();
-        
-        cameraInput.onchange = function(e) {
-            if (e.target.files && e.target.files[0]) {
-                handleNewPhotos(Array.from(e.target.files));
-            }
-        };
     }
+
+    // Camera input handler
+    document.getElementById('cameraInput').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files.length > 0) {
+            handleNewPhotos(Array.from(e.target.files));
+        }
+    });
 
     // Handle new photos
     function handleNewPhotos(newFiles) {
@@ -2188,7 +2209,9 @@
         const largeFiles = selectedPhotos.filter(f => f.size > 5 * 1024 * 1024);
         if (largeFiles.length > 0) {
             if (confirm('Some photos are large (>5MB). Would you like to compress them for better storage?')) {
-                compressPhotos(largeFiles);
+                compressPhotos(largeFiles).then(() => {
+                    document.getElementById('photoCount').innerText = `${selectedPhotos.length} photo(s) selected`;
+                });
             }
         }
     }
@@ -2198,19 +2221,30 @@
         const previewDiv = document.getElementById('photoPreview');
         previewDiv.innerHTML = '';
         
-        selectedPhotos.forEach((file, index) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = document.createElement('div');
-                preview.className = 'photo-preview-item';
+        selectedPhotos.forEach((photo, index) => {
+            const preview = document.createElement('div');
+            preview.className = 'photo-preview-item';
+            
+            // Handle both File objects and stored photo objects
+            if (photo.isDataUrl) {
                 preview.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview">
+                    <img src="${photo.data}" alt="Preview">
                     <button class="photo-remove" onclick="removePhoto(${index})">×</button>
-                    <div class="photo-size">${(file.size / 1024).toFixed(0)}KB</div>
+                    <div class="photo-size">${(photo.size / 1024).toFixed(0)}KB</div>
                 `;
                 previewDiv.appendChild(preview);
-            };
-            reader.readAsDataURL(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button class="photo-remove" onclick="removePhoto(${index})">×</button>
+                        <div class="photo-size">${(photo.size / 1024).toFixed(0)}KB</div>
+                    `;
+                    previewDiv.appendChild(preview);
+                };
+                reader.readAsDataURL(photo);
+            }
         });
     }
 
@@ -2222,8 +2256,23 @@
     }
 
     // Compress photos
-    function compressPhotos(files) {
-        files.forEach((file) => {
+    async function compressPhotos(files) {
+        for (const file of files) {
+            try {
+                const compressedFile = await compressSinglePhoto(file);
+                const fileIndex = selectedPhotos.indexOf(file);
+                if (fileIndex !== -1) {
+                    selectedPhotos[fileIndex] = compressedFile;
+                }
+            } catch (error) {
+                console.error('Error compressing photo:', error);
+            }
+        }
+        updatePhotoPreviews();
+    }
+
+    function compressSinglePhoto(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -2258,16 +2307,13 @@
                             type: 'image/jpeg',
                             lastModified: Date.now()
                         });
-                        
-                        const fileIndex = selectedPhotos.indexOf(file);
-                        if (fileIndex !== -1) {
-                            selectedPhotos[fileIndex] = compressedFile;
-                            updatePhotoPreviews();
-                        }
+                        resolve(compressedFile);
                     }, 'image/jpeg', 0.8);
                 };
+                img.onerror = reject;
                 img.src = e.target.result;
             };
+            reader.onerror = reject;
             reader.readAsDataURL(file);
         });
     }
@@ -2282,6 +2328,19 @@
     // Apply template
     function applyTemplate(templateName) {
         const template = templates[templateName];
+        
+        // Reset relevant fields first
+        if (templateName === 'postFire') {
+            document.getElementById('fullFlower').checked = false;
+            document.getElementById('seedPod').checked = false;
+        } else if (templateName === 'peakFlower') {
+            document.getElementById('fireHistory').value = '';
+        } else if (templateName === 'seedCollection') {
+            document.getElementById('fireHistory').value = '';
+        } else if (templateName === 'pollinatorSurvey') {
+            document.getElementById('fireHistory').value = '';
+            document.getElementById('seedMaturity').value = '';
+        }
         
         if (template.fireHistory) document.getElementById('fireHistory').value = template.fireHistory;
         if (template.notes) document.getElementById('notes').value = template.notes;
@@ -2433,7 +2492,7 @@
         };
     }
 
-    // Save record - FIXED VERSION
+    // Save record
     function saveRecord() {
         updateTempDisplay();
         
@@ -2444,27 +2503,49 @@
         
         const data = collectFormData();
         
-        const photoPromises = selectedPhotos.map(file => {
+        // Process photos - handle both File objects and stored photo objects
+        const photoPromises = selectedPhotos.map(photo => {
             return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
+                // If it's already a stored photo with data URL
+                if (photo.isDataUrl) {
                     resolve({
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        data: e.target.result
+                        name: photo.name,
+                        type: photo.type,
+                        size: photo.size,
+                        data: photo.data
                     });
-                };
-                reader.readAsDataURL(file);
+                } else {
+                    // It's a File object, need to read it
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        resolve({
+                            name: photo.name,
+                            type: photo.type,
+                            size: photo.size,
+                            data: e.target.result
+                        });
+                    };
+                    reader.readAsDataURL(photo);
+                }
             });
         });
         
         Promise.all(photoPromises).then(photoData => {
+            // Check approximate size
+            const totalSize = photoData.reduce((sum, p) => sum + (p.size || 0), 0);
+            const totalSizeMB = totalSize / (1024 * 1024);
+            
+            if (totalSizeMB > 5) {
+                if (!confirm(`Warning: Photos total ${totalSizeMB.toFixed(1)}MB. Large photos may cause storage issues. Continue anyway?`)) {
+                    return;
+                }
+            }
+            
             data.photos = photoData;
             savedRecords.push(data);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecords));
             
-            // CRITICAL FIX: Refresh the display
+            // Refresh the display
             displayRecords();
             updateStats();
             
@@ -2494,19 +2575,40 @@
         
         if (!file) return;
         
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File too large. Maximum size is 10MB.');
+            fileInput.value = '';
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const importedData = JSON.parse(e.target.result);
                 
+                // Validate structure
+                const isValidRecord = (record) => {
+                    return record.observer && 
+                           record.collectionDate && 
+                           record.species &&
+                           record.location &&
+                           record.phenology;
+                };
+                
                 if (Array.isArray(importedData)) {
-                    savedRecords = [...savedRecords, ...importedData];
-                    document.getElementById('outputBox').innerText = `✅ Imported ${importedData.length} records`;
-                } else if (importedData.id) {
+                    const validRecords = importedData.filter(isValidRecord);
+                    if (validRecords.length === 0) {
+                        alert('No valid records found in import file');
+                        return;
+                    }
+                    savedRecords = [...savedRecords, ...validRecords];
+                    document.getElementById('outputBox').innerText = `✅ Imported ${validRecords.length} valid records (skipped ${importedData.length - validRecords.length} invalid)`;
+                } else if (isValidRecord(importedData)) {
                     savedRecords.push(importedData);
                     document.getElementById('outputBox').innerText = `✅ Imported 1 record`;
                 } else {
-                    alert('Invalid data format: Expected a record or array of records');
+                    alert('Invalid data format: Missing required fields');
                     return;
                 }
                 
@@ -2522,7 +2624,7 @@
         reader.readAsText(file);
     }
 
-    // Display records - FIXED to ensure they show up
+    // Display records
     function displayRecords() {
         const grid = document.getElementById('recordsGrid');
         const countEl = document.getElementById('recordCount');
@@ -2629,30 +2731,29 @@
         document.getElementById('fireHistory').value = record.siteHistory.fire || '';
         document.getElementById('notes').value = record.siteHistory.notes || '';
         
+        // Handle photos properly - store the photo data directly
         if (record.photos && record.photos.length > 0) {
-            const photoFiles = record.photos.map(photo => {
-                const byteString = atob(photo.data.split(',')[1]);
-                const mimeString = photo.data.split(',')[0].split(':')[1].split(';')[0];
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
-                const file = new File([ab], photo.name, { type: mimeString });
-                file.preview = photo.data;
-                return file;
+            // Store the photo data directly (not as File objects)
+            selectedPhotos = record.photos.map(photo => {
+                return {
+                    name: photo.name,
+                    type: photo.type,
+                    size: photo.size,
+                    data: photo.data,  // Keep the data URL
+                    isDataUrl: true
+                };
             });
-            selectedPhotos = photoFiles;
             
+            // Update preview
             const previewDiv = document.getElementById('photoPreview');
             previewDiv.innerHTML = '';
-            selectedPhotos.forEach((file, idx) => {
+            selectedPhotos.forEach((photo, idx) => {
                 const preview = document.createElement('div');
                 preview.className = 'photo-preview-item';
                 preview.innerHTML = `
-                    <img src="${file.preview || URL.createObjectURL(file)}" alt="Preview">
+                    <img src="${photo.data}" alt="Preview">
                     <button class="photo-remove" onclick="removePhoto(${idx})">×</button>
-                    <div class="photo-size">${(file.size / 1024).toFixed(0)}KB</div>
+                    <div class="photo-size">${(photo.size / 1024).toFixed(0)}KB</div>
                 `;
                 previewDiv.appendChild(preview);
             });
