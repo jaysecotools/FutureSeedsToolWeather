@@ -1159,7 +1159,7 @@
         <div class="program-badge">⚡ interactive map · quick region · camera ready · data import · auto weather <span class="new-badge">NEW</span></div>
     </div>
 
-    <!-- Instructions Toggle (formerly User Guide) -->
+    <!-- Instructions Toggle -->
     <div class="guide-toggle" onclick="toggleGuide()">
         <span>📖</span> Show/Hide Instructions
     </div>
@@ -1180,7 +1180,6 @@
                 <ul>
                     <li>Enter your name (compulsory field)</li>
                     <li>Name is saved and will auto-fill next time</li>
-                    <li>Greyed out example shows format</li>
                 </ul>
             </div>
             <div class="guide-step">
@@ -1218,27 +1217,24 @@
                     <li><strong>Auto-load weather:</strong> Click "🌤️ Auto-load Current Weather" button</li>
                     <li>Uses Open-Meteo (free, no API key required)</li>
                     <li>Automatically loads when you click the map or use "My Location"</li>
-                    <li>Or manually enter BOM data for your location</li>
-                    <li>Enter ACTUAL min/max temperatures</li>
-                    <li>Station name and ID optional but helpful</li>
+                    <li>All weather data (temp, humidity, wind, conditions) is saved with your record</li>
                 </ul>
             </div>
             <div class="guide-step">
                 <h3>🌱 8. Seed & Fire <span class="optional-badge">optional</span></h3>
                 <ul>
-                    <li>Seed maturity (example shown in grey)</li>
-                    <li>Fire history (example shown in grey)</li>
+                    <li>Seed maturity</li>
+                    <li>Fire history</li>
                     <li>Site notes for additional observations</li>
                 </ul>
             </div>
             <div class="guide-step">
                 <h3>💾 9. Save & Export</h3>
                 <ul>
-                    <li>Save to local storage</li>
-                    <li>Export as JSON, Excel, or CSV</li>
+                    <li>Save to local storage - records appear immediately below</li>
+                    <li>Export as JSON, Excel, or CSV with full weather data</li>
                     <li><strong>Import Data:</strong> Load previously exported JSON</li>
                     <li>Edit or delete existing records</li>
-                    <li><strong>NEW:</strong> Add custom species using the + button</li>
                 </ul>
             </div>
         </div>
@@ -1418,7 +1414,7 @@
                 </div>
             </div>
 
-            <!-- RIGHT: SEED + FIRE + MANUAL WEATHER -->
+            <!-- RIGHT: SEED + FIRE + WEATHER -->
             <div>
                 <div class="data-card">
                     <h2>🌡️ WEATHER DATA 
@@ -1437,7 +1433,7 @@
                     </div>
                     
                     <div class="weather-note">
-                        🔍 Look up BOM data for your location and enter actual monthly values, or use the auto-load button above
+                        🔍 Click the button above to auto-load current weather data (saved with your record)
                     </div>
                     
                     <div class="field-grid">
@@ -1450,8 +1446,8 @@
                             <input type="number" id="actualMaxTemp" step="0.1" placeholder="e.g., 23.1" oninput="updateTempDisplay()">
                         </div>
                         <div class="field">
-                            <label>📍 BOM station name</label>
-                            <input type="text" id="bomStation" placeholder="e.g., Hobart Airport">
+                            <label>📍 Weather source</label>
+                            <input type="text" id="bomStation" placeholder="e.g., Open-Meteo or BOM station">
                         </div>
                         <div class="field">
                             <label>🆔 Station ID</label>
@@ -1465,7 +1461,7 @@
                     </div>
                     
                     <div class="temp-note">
-                        ⏱️ Enter ACTUAL recorded min/max for this collection month, or click auto-load above
+                        ⏱️ Auto-loaded weather includes current conditions, humidity, wind, and precipitation
                     </div>
 
                     <div style="margin-top: 2rem;">
@@ -1530,10 +1526,10 @@
 
         <!-- OUTPUT PREVIEW -->
         <div class="output-box" id="outputBox">
-            ⏺ Dataset preview will appear here. Capture data to begin. Try the new auto-weather button!
+            ⏺ Welcome to Future Seeds Data Collector! Fill out the form and click Save Record to begin.
         </div>
 
-        <div class="weather-credit">🌤️ Auto-weather powered by Open-Meteo (free, no API key) · Enter actual BOM observations for correlation analysis (optional)</div>
+        <div class="weather-credit">🌤️ Auto-weather powered by Open-Meteo (free, no API key) · Full weather data saved with each record</div>
     </div>
 
     <!-- Footer -->
@@ -1724,7 +1720,7 @@
                 document.getElementById('actualMaxTemp').value = maxTemp.toFixed(1);
                 
                 // Add station info with all weather details
-                document.getElementById('bomStation').value = `Open-Meteo - ${lastWeatherData.current.weatherDescription} (${lastWeatherData.current.temperature}°C, ${lastWeatherData.current.humidity}% RH, wind ${lastWeatherData.current.windSpeed} km/h)`;
+                document.getElementById('bomStation').value = `Open-Meteo - ${lastWeatherData.current.weatherDescription} (${lastWeatherData.current.temperature}°C, ${lastWeatherData.current.humidity}% RH)`;
                 
                 // Update display
                 updateTempDisplay();
@@ -1920,7 +1916,7 @@
     function toggleLocationMode() {
         if (usingMapMode) {
             enableQuickRegionMode();
-            updateFromRegion(); // Reset to current region coordinates
+            updateFromRegion();
             document.getElementById('toggleLocationMode').innerHTML = '🔄 Switch to Map Mode';
         } else {
             enableMapMode();
@@ -2089,10 +2085,6 @@
             marker.setLatLng([preset.lat, preset.lon]);
             map.setView([preset.lat, preset.lon], 8);
         }
-        
-        if (usingMapMode) {
-            enableQuickRegionMode();
-        }
     }
 
     // Get current month index
@@ -2108,7 +2100,7 @@
     // Update month display
     function updateMonthDisplay() {
         const monthIndex = getCurrentMonthIndex();
-        document.getElementById('currentMonthDisplay').innerHTML = `📆 ${monthDisplayNames[monthIndex]} 2026 · manual weather entry`;
+        document.getElementById('currentMonthDisplay').innerHTML = `📆 ${monthDisplayNames[monthIndex]} 2026 · weather data ready`;
     }
 
     // Update temperature display
@@ -2141,7 +2133,6 @@
     function handleFloweringNone() {
         const floweringNone = document.getElementById('floweringNone');
         if (floweringNone.checked) {
-            // Uncheck all other flowering options
             document.getElementById('bud').checked = false;
             document.getElementById('earlyFlower').checked = false;
             document.getElementById('fullFlower').checked = false;
@@ -2154,14 +2145,12 @@
     function handlePollinatorsNone() {
         const pollinatorsNone = document.getElementById('pollinatorsNone');
         if (pollinatorsNone.checked) {
-            // Uncheck all other pollinator options
             document.getElementById('honeybee').checked = false;
             document.getElementById('nativeBee').checked = false;
             document.getElementById('fly').checked = false;
             document.getElementById('beetle').checked = false;
             document.getElementById('wasp').checked = false;
             document.getElementById('butterfly').checked = false;
-            // Clear other insects textarea
             document.getElementById('otherInsects').value = '';
         }
     }
@@ -2308,19 +2297,16 @@
     function validateRequired() {
         const errors = [];
         
-        // Check observer
         const observer = document.getElementById('observer').value.trim();
         if (!observer) {
             errors.push('Observer name is required');
         }
         
-        // Check date
         const date = document.getElementById('obsDate').value;
         if (!date) {
             errors.push('Date is required');
         }
         
-        // Check flowering stage (including None option)
         const floweringSelected = [
             'bud', 'earlyFlower', 'fullFlower', 'petalFall', 'seedPod'
         ].some(id => document.getElementById(id).checked);
@@ -2331,7 +2317,6 @@
             errors.push('Either select a flowering stage or check "None"');
         }
         
-        // Check pollinators (including None option)
         const pollinatorsSelected = [
             'honeybee', 'nativeBee', 'fly', 'beetle', 'wasp', 'butterfly'
         ].some(id => document.getElementById(id).checked);
@@ -2359,20 +2344,18 @@
         }
     }
 
-    // Collect form data (optional fields can be empty)
+    // Collect form data
     function collectFormData() {
         const region = document.getElementById('regionSelect').value;
         
         const monthIndex = getCurrentMonthIndex();
         const monthName = monthDisplayNames[monthIndex];
 
-        // Get observer and save it for next time
         const observer = document.getElementById('observer').value.trim();
         if (observer) {
             localStorage.setItem(OBSERVER_KEY, observer);
         }
 
-        // Helper function to get optional values (return null if empty)
         const getOptionalNumber = (id) => {
             const val = document.getElementById(id).value;
             return val ? parseFloat(val) : null;
@@ -2383,7 +2366,6 @@
             return val || null;
         };
 
-        // Build weather object with all available data
         const weatherData = {
             month: monthName,
             year: 2026,
@@ -2394,7 +2376,6 @@
             dataType: lastWeatherData ? "Open-Meteo Auto" : "Manual Entry"
         };
 
-        // If we have lastWeatherData, include all the detailed weather info
         if (lastWeatherData) {
             weatherData.autoWeather = {
                 latitude: lastWeatherData.latitude,
@@ -2448,11 +2429,11 @@
                 notes: getOptionalString('notes')
             },
             weather: weatherData,
-            photos: [] // Will be populated with full photo data when saving
+            photos: []
         };
     }
 
-    // Save record
+    // Save record - FIXED VERSION
     function saveRecord() {
         updateTempDisplay();
         
@@ -2482,11 +2463,27 @@
             data.photos = photoData;
             savedRecords.push(data);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecords));
+            
+            // CRITICAL FIX: Refresh the display
             displayRecords();
             updateStats();
-            document.getElementById('outputBox').innerText = '✅ Record saved to local storage!\n\n' + 
-                JSON.stringify({...data, photos: `${data.photos.length} photo(s)`}, null, 2);
+            
+            // Show success message
+            document.getElementById('outputBox').innerText = 
+                `✅ Record saved successfully!\n\n` +
+                `Observer: ${data.observer}\n` +
+                `Date: ${data.collectionDate}\n` +
+                `Species: ${data.species}\n` +
+                `Location: ${data.location.region}\n` +
+                `Weather: ${data.weather.minTemp || '--'}°C / ${data.weather.maxTemp || '--'}°C (${data.weather.dataType})\n` +
+                `Photos: ${data.photos.length}\n\n` +
+                `Total records: ${savedRecords.length}`;
+            
+            // Reset form for next entry
             resetForm();
+        }).catch(error => {
+            console.error('Error saving photos:', error);
+            alert('Error saving photos. Please try again.');
         });
     }
 
@@ -2502,13 +2499,10 @@
             try {
                 const importedData = JSON.parse(e.target.result);
                 
-                // Handle single record or array of records
                 if (Array.isArray(importedData)) {
-                    // Check if it's an array of records
                     savedRecords = [...savedRecords, ...importedData];
                     document.getElementById('outputBox').innerText = `✅ Imported ${importedData.length} records`;
                 } else if (importedData.id) {
-                    // Single record
                     savedRecords.push(importedData);
                     document.getElementById('outputBox').innerText = `✅ Imported 1 record`;
                 } else {
@@ -2520,7 +2514,6 @@
                 displayRecords();
                 updateStats();
                 
-                // Clear file input
                 fileInput.value = '';
             } catch (error) {
                 alert('Error importing file: ' + error.message);
@@ -2529,12 +2522,12 @@
         reader.readAsText(file);
     }
 
-    // Display records
+    // Display records - FIXED to ensure they show up
     function displayRecords() {
         const grid = document.getElementById('recordsGrid');
         const countEl = document.getElementById('recordCount');
         
-        if (savedRecords.length === 0) {
+        if (!savedRecords || savedRecords.length === 0) {
             grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:2rem; color:#5f7344;">No saved records yet. Complete and save your first observation!</div>';
             countEl.innerText = '0 records';
             return;
@@ -2542,23 +2535,28 @@
 
         countEl.innerText = `${savedRecords.length} record${savedRecords.length !== 1 ? 's' : ''}`;
         
-        grid.innerHTML = savedRecords.map((record, index) => {
-            // Check if record has photos and display indicator
+        // Sort by date (newest first)
+        const sortedRecords = [...savedRecords].sort((a, b) => 
+            new Date(b.collectionDate) - new Date(a.collectionDate)
+        );
+        
+        grid.innerHTML = sortedRecords.map((record, index) => {
             const hasPhotos = record.photos && record.photos.length > 0;
             const weatherSource = record.weather && record.weather.dataType === "Open-Meteo Auto" ? " (auto)" : "";
+            const displaySpecies = record.species ? record.species.split(' ').slice(0, 2).join(' ') : 'Unknown';
             
             return `
-                <div class="record-card" onclick="selectRecord(${index})">
+                <div class="record-card" onclick="selectRecord(${savedRecords.indexOf(record)})">
                     <div class="record-date">📅 ${record.collectionDate}</div>
-                    <div class="record-species">🌿 <i>${record.species ? record.species.split(' ')[0] : ''} ${record.species ? record.species.split(' ')[1] || '' : ''}</i></div>
-                    <div class="record-location">📍 ${record.location ? record.location.region : 'Unknown'}</div>
+                    <div class="record-species">🌿 <i>${displaySpecies}</i></div>
+                    <div class="record-location">📍 ${record.location ? record.location.region.split(' ')[0] : 'Unknown'}</div>
                     ${record.weather && record.weather.minTemp && record.weather.maxTemp ? 
                         `<div class="record-weather">🌡️ ${record.weather.minTemp}°C / ${record.weather.maxTemp}°C${weatherSource}</div>` : ''}
                     ${hasPhotos ? 
-                        `<div class="record-photo-indicator">📸 ${record.photos.length} photo(s)</div>` : ''}
+                        `<div class="record-photo-indicator">📸 ${record.photos.length}</div>` : ''}
                     <div class="record-actions">
-                        <button class="record-btn edit" onclick="event.stopPropagation(); editRecord(${index})">✏️ Edit</button>
-                        <button class="record-btn delete" onclick="event.stopPropagation(); deleteRecord(${index})">🗑️ Delete</button>
+                        <button class="record-btn edit" onclick="event.stopPropagation(); editRecord(${savedRecords.indexOf(record)})">✏️ Edit</button>
+                        <button class="record-btn delete" onclick="event.stopPropagation(); deleteRecord(${savedRecords.indexOf(record)})">🗑️ Delete</button>
                     </div>
                 </div>
             `;
@@ -2576,7 +2574,7 @@
         
         const cards = document.querySelectorAll('.record-card');
         cards.forEach(c => c.classList.remove('selected'));
-        cards[index]?.classList.add('selected');
+        if (cards[index]) cards[index].classList.add('selected');
     }
 
     // Edit record
@@ -2623,7 +2621,6 @@
         document.getElementById('bomStation').value = record.weather.station || '';
         document.getElementById('stationId').value = record.weather.stationId || '';
         
-        // Restore lastWeatherData if available
         if (record.weather.autoWeather) {
             lastWeatherData = record.weather.autoWeather;
         }
@@ -2632,11 +2629,8 @@
         document.getElementById('fireHistory').value = record.siteHistory.fire || '';
         document.getElementById('notes').value = record.siteHistory.notes || '';
         
-        // Restore photos if they exist
         if (record.photos && record.photos.length > 0) {
-            // Convert stored photo data back to File objects
             const photoFiles = record.photos.map(photo => {
-                // Extract the base64 data
                 const byteString = atob(photo.data.split(',')[1]);
                 const mimeString = photo.data.split(',')[0].split(':')[1].split(';')[0];
                 const ab = new ArrayBuffer(byteString.length);
@@ -2645,13 +2639,11 @@
                     ia[i] = byteString.charCodeAt(i);
                 }
                 const file = new File([ab], photo.name, { type: mimeString });
-                // Add a custom property to store the data URL for preview
                 file.preview = photo.data;
                 return file;
             });
             selectedPhotos = photoFiles;
             
-            // Update photo previews using stored data URLs
             const previewDiv = document.getElementById('photoPreview');
             previewDiv.innerHTML = '';
             selectedPhotos.forEach((file, idx) => {
@@ -2729,53 +2721,6 @@
         }
     }
 
-    // Show field statistics
-    function showFieldStats() {
-        const stats = {
-            totalRecords: savedRecords.length,
-            uniqueSites: new Set(savedRecords.map(r => r.location ? r.location.siteName : '').filter(Boolean)).size,
-            speciesCount: new Set(savedRecords.map(r => r.species)).size,
-            regions: {},
-            fireHistory: {},
-            locationModes: {
-                precise: savedRecords.filter(r => r.locationMode === 'precise_map').length,
-                quick: savedRecords.filter(r => r.locationMode === 'quick_region').length
-            },
-            totalPhotos: savedRecords.reduce((sum, r) => sum + (r.photos?.length || 0), 0),
-            weatherRecords: savedRecords.filter(r => r.weather && r.weather.minTemp).length,
-            autoWeatherRecords: savedRecords.filter(r => r.weather && r.weather.dataType === "Open-Meteo Auto").length
-        };
-        
-        savedRecords.forEach(r => {
-            if (r.location && r.location.region) {
-                stats.regions[r.location.region] = (stats.regions[r.location.region] || 0) + 1;
-            }
-            if (r.siteHistory && r.siteHistory.fire) {
-                stats.fireHistory[r.siteHistory.fire] = (stats.fireHistory[r.siteHistory.fire] || 0) + 1;
-            }
-        });
-        
-        let output = '📊 Field Statistics:\n\n' +
-            `Total Records: ${stats.totalRecords}\n` +
-            `Unique Sites: ${stats.uniqueSites}\n` +
-            `Species Count: ${stats.speciesCount}\n` +
-            `Total Photos: ${stats.totalPhotos}\n` +
-            `Weather Records: ${stats.weatherRecords}\n` +
-            `  ↳ Auto-weather: ${stats.autoWeatherRecords}\n` +
-            `📍 Precise Map Records: ${stats.locationModes.precise}\n` +
-            `⚡ Quick Region Records: ${stats.locationModes.quick}\n\n`;
-        
-        if (Object.keys(stats.regions).length > 0) {
-            output += `Records by Region:\n${Object.entries(stats.regions).map(([r, c]) => `  ${r}: ${c}`).join('\n')}\n\n`;
-        }
-        
-        if (Object.keys(stats.fireHistory).length > 0) {
-            output += `Fire History:\n${Object.entries(stats.fireHistory).map(([f, c]) => `  ${f}: ${c}`).join('\n')}`;
-        }
-        
-        document.getElementById('outputBox').innerText = output;
-    }
-
     // Export ALL records as JSON
     function exportAllJSON() {
         if (savedRecords.length === 0) {
@@ -2802,7 +2747,6 @@
             return;
         }
         
-        // Flatten each record for Excel with all weather details
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
             'Location Mode': record.locationMode,
@@ -2813,7 +2757,6 @@
             'Site Name': record.location ? record.location.siteName || '' : '',
             'Latitude': record.location ? record.location.latitude : '',
             'Longitude': record.location ? record.location.longitude : '',
-            'Coordinate Source': record.location ? record.location.coordinateSource : '',
             'Flowering - Bud': record.phenology ? record.phenology.flowering.bud : '',
             'Flowering - Early': record.phenology ? record.phenology.flowering.earlyFlower : '',
             'Flowering - Full': record.phenology ? record.phenology.flowering.fullFlower : '',
@@ -2835,18 +2778,15 @@
             'Weather Year': record.weather ? record.weather.year : '',
             'Actual Min Temp (°C)': record.weather ? record.weather.minTemp || '' : '',
             'Actual Max Temp (°C)': record.weather ? record.weather.maxTemp || '' : '',
-            'BOM Station': record.weather ? record.weather.station || '' : '',
+            'Weather Station': record.weather ? record.weather.station || '' : '',
             'Station ID': record.weather ? record.weather.stationId || '' : '',
             'Weather Data Source': record.weather ? record.weather.dataType || '' : '',
-            // Auto-weather detailed fields
             'Auto Weather - Current Temp (°C)': record.weather?.autoWeather?.current?.temperature || '',
             'Auto Weather - Humidity (%)': record.weather?.autoWeather?.current?.humidity || '',
             'Auto Weather - Conditions': record.weather?.autoWeather?.current?.weatherDescription || '',
             'Auto Weather - Wind Speed (km/h)': record.weather?.autoWeather?.current?.windSpeed || '',
             'Auto Weather - Pressure (hPa)': record.weather?.autoWeather?.current?.pressure || '',
             'Auto Weather - Precipitation (mm)': record.weather?.autoWeather?.daily?.precipitation || '',
-            'Auto Weather - Timezone': record.weather?.autoWeather?.timezone || '',
-            'Auto Weather - Loaded At': record.weather?.autoWeather?.loadedAt || '',
             'Photo Count': record.photos ? record.photos.length : 0,
             'Record Timestamp': record.timestamp
         }));
@@ -2856,7 +2796,6 @@
         XLSX.utils.book_append_sheet(wb, ws, "Future Seeds Data");
         
         const filename = `Future_Seeds_All_Records_${new Date().toISOString().split('T')[0]}.xlsx`;
-        
         XLSX.writeFile(wb, filename);
         
         document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to Excel with full weather data`;
@@ -2869,7 +2808,6 @@
             return;
         }
         
-        // Flatten each record for CSV with key weather details
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
             'Observer': record.observer,
@@ -2891,7 +2829,6 @@
             'Notes': record.siteHistory ? record.siteHistory.notes || '' : ''
         }));
         
-        // Create CSV headers
         const headers = Object.keys(flatData[0]).join(',');
         const rows = flatData.map(row => 
             Object.values(row).map(v => 
@@ -2946,7 +2883,6 @@
         document.getElementById('speciesSelect').value = 'Acacia verticillata';
         document.getElementById('regionSelect').value = 'south';
         
-        // Clear weather data
         lastWeatherData = null;
         
         selectedPhotos = [];
@@ -2963,14 +2899,10 @@
             marker.setLatLng([-42.88, 147.33]);
             map.setView([-42.88, 147.33], 7);
         }
-        
-        document.getElementById('outputBox').innerText = '⏺ Form reset. Ready for new capture.';
-        document.querySelectorAll('.record-card').forEach(c => c.classList.remove('selected'));
     }
 
     // Add event listeners for checkbox interactions
     document.addEventListener('DOMContentLoaded', function() {
-        // Flowering checkboxes
         const floweringCheckboxes = ['bud', 'earlyFlower', 'fullFlower', 'petalFall', 'seedPod'];
         floweringCheckboxes.forEach(id => {
             document.getElementById(id).addEventListener('change', function() {
@@ -2980,7 +2912,6 @@
             });
         });
 
-        // Pollinator checkboxes
         const pollinatorCheckboxes = ['honeybee', 'nativeBee', 'fly', 'beetle', 'wasp', 'butterfly'];
         pollinatorCheckboxes.forEach(id => {
             document.getElementById(id).addEventListener('change', function() {
@@ -2990,7 +2921,6 @@
             });
         });
 
-        // Other insects textarea
         document.getElementById('otherInsects').addEventListener('input', function() {
             if (this.value.trim() !== '') {
                 document.getElementById('pollinatorsNone').checked = false;
@@ -3010,13 +2940,13 @@
         enableQuickRegionMode();
         updateFromRegion();
         
-        // Load saved observer name
         if (savedObserver) {
             document.getElementById('observer').value = savedObserver;
         }
         
-        // Show field statistics in output box on load
-        showFieldStats();
+        if (savedRecords.length > 0) {
+            document.getElementById('outputBox').innerText = `📊 Welcome back! You have ${savedRecords.length} saved record(s).`;
+        }
     };
 </script>
 </body>
