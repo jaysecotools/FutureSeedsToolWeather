@@ -2193,7 +2193,9 @@
 
     // Handle new photos
     function handleNewPhotos(newFiles) {
-        const allFiles = [...selectedPhotos, ...newFiles];
+        // Convert FileList to array if needed
+        const filesArray = Array.from(newFiles);
+        const allFiles = [...selectedPhotos, ...filesArray];
         const MAX_PHOTOS = 10;
         
         if (allFiles.length > MAX_PHOTOS) {
@@ -2206,11 +2208,12 @@
         document.getElementById('photoCount').innerText = `${selectedPhotos.length} photo(s) selected`;
         updatePhotoPreviews();
         
-        const largeFiles = selectedPhotos.filter(f => f.size > 5 * 1024 * 1024);
+        const largeFiles = selectedPhotos.filter(f => f instanceof File && f.size > 5 * 1024 * 1024);
         if (largeFiles.length > 0) {
             if (confirm('Some photos are large (>5MB). Would you like to compress them for better storage?')) {
                 compressPhotos(largeFiles).then(() => {
                     document.getElementById('photoCount').innerText = `${selectedPhotos.length} photo(s) selected`;
+                    updatePhotoPreviews();
                 });
             }
         }
@@ -2226,14 +2229,14 @@
             preview.className = 'photo-preview-item';
             
             // Handle both File objects and stored photo objects
-            if (photo.isDataUrl) {
+            if (photo.isDataUrl && photo.data) {
                 preview.innerHTML = `
                     <img src="${photo.data}" alt="Preview">
                     <button class="photo-remove" onclick="removePhoto(${index})">×</button>
                     <div class="photo-size">${(photo.size / 1024).toFixed(0)}KB</div>
                 `;
                 previewDiv.appendChild(preview);
-            } else {
+            } else if (photo instanceof File) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     preview.innerHTML = `
@@ -2244,6 +2247,13 @@
                     previewDiv.appendChild(preview);
                 };
                 reader.readAsDataURL(photo);
+            } else if (photo.data && photo.data.startsWith('data:')) {
+                preview.innerHTML = `
+                    <img src="${photo.data}" alt="Preview">
+                    <button class="photo-remove" onclick="removePhoto(${index})">×</button>
+                    <div class="photo-size">${(photo.size / 1024).toFixed(0)}KB</div>
+                `;
+                previewDiv.appendChild(preview);
             }
         });
     }
@@ -2268,7 +2278,7 @@
                 console.error('Error compressing photo:', error);
             }
         }
-        updatePhotoPreviews();
+        return Promise.resolve();
     }
 
     function compressSinglePhoto(file) {
@@ -2281,8 +2291,9 @@
                     let width = img.width;
                     let height = img.height;
                     
-                    const MAX_WIDTH = 1200;
-                    const MAX_HEIGHT = 1200;
+                    // Aggressive size limits for better storage
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
                     
                     if (width > height) {
                         if (width > MAX_WIDTH) {
@@ -2302,13 +2313,14 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
+                    // Lower quality for better compression
                     canvas.toBlob((blob) => {
                         const compressedFile = new File([blob], file.name, {
                             type: 'image/jpeg',
                             lastModified: Date.now()
                         });
                         resolve(compressedFile);
-                    }, 'image/jpeg', 0.8);
+                    }, 'image/jpeg', 0.6);
                 };
                 img.onerror = reject;
                 img.src = e.target.result;
@@ -2455,12 +2467,13 @@
             collectionDate: document.getElementById('obsDate').value,
             species: document.getElementById('speciesSelect').value,
             location: {
-                region: regionPresets[region].name,
-                regionCode: region,
+                region: usingMapMode ? "Precise Map Location" : regionPresets[region].name,
+                regionCode: usingMapMode ? "map_selected" : region,
                 siteName: getOptionalString('siteName'),
                 latitude: parseFloat(document.getElementById('lat').value),
                 longitude: parseFloat(document.getElementById('lon').value),
-                coordinateSource: document.getElementById('coordSource').value
+                coordinateSource: document.getElementById('coordSource').value,
+                locationMode: usingMapMode ? "precise_map" : "quick_region"
             },
             phenology: {
                 flowering: {
@@ -2492,8 +2505,15 @@
         };
     }
 
-    // Save record
+    // Save record - FIXED with quota handling
     function saveRecord() {
+        // Save observer immediately when saving
+        const observer = document.getElementById('observer').value.trim();
+        if (observer) {
+            localStorage.setItem(OBSERVER_KEY, observer);
+            savedObserver = observer;
+        }
+        
         updateTempDisplay();
         
         const errors = validateRequired();
@@ -2506,16 +2526,26 @@
         // Process photos - handle both File objects and stored photo objects
         const photoPromises = selectedPhotos.map(photo => {
             return new Promise((resolve) => {
-                // If it's already a stored photo with data URL
-                if (photo.isDataUrl) {
+                // If it's already a processed photo object with data URL
+                if (photo.data && photo.data.startsWith('data:')) {
+                    resolve({
+                        name: photo.name || 'photo.jpg',
+                        type: photo.type || 'image/jpeg',
+                        size: photo.size || 0,
+                        data: photo.data
+                    });
+                }
+                // If it's a photo object with isDataUrl flag
+                else if (photo.isDataUrl && photo.data) {
                     resolve({
                         name: photo.name,
                         type: photo.type,
                         size: photo.size,
                         data: photo.data
                     });
-                } else {
-                    // It's a File object, need to read it
+                }
+                // If it's a File object
+                else if (photo instanceof File) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         resolve({
@@ -2527,45 +2557,93 @@
                     };
                     reader.readAsDataURL(photo);
                 }
+                // Fallback for any other case
+                else {
+                    console.warn('Unknown photo format:', photo);
+                    resolve(null);
+                }
             });
         });
         
         Promise.all(photoPromises).then(photoData => {
+            // Filter out any null values
+            const validPhotoData = photoData.filter(p => p !== null);
+            
             // Check approximate size
-            const totalSize = photoData.reduce((sum, p) => sum + (p.size || 0), 0);
+            const totalSize = validPhotoData.reduce((sum, p) => sum + (p.size || 0), 0);
             const totalSizeMB = totalSize / (1024 * 1024);
             
-            if (totalSizeMB > 5) {
-                if (!confirm(`Warning: Photos total ${totalSizeMB.toFixed(1)}MB. Large photos may cause storage issues. Continue anyway?`)) {
+            // Warn if too large
+            if (totalSizeMB > 4) {
+                if (!confirm(`Warning: Photos total ${totalSizeMB.toFixed(1)}MB. This is near the storage limit. Continue anyway?`)) {
                     return;
                 }
             }
             
-            data.photos = photoData;
-            savedRecords.push(data);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecords));
+            data.photos = validPhotoData;
             
-            // Refresh the display
-            displayRecords();
-            updateStats();
+            // Check if we're about to exceed quota
+            try {
+                // Test save with current data plus new record
+                const testRecords = [...savedRecords, data];
+                const testString = JSON.stringify(testRecords);
+                
+                if (testString.length > 4.5 * 1024 * 1024) { // 4.5MB limit (safely under 5MB)
+                    alert('Cannot save: Storage limit would be exceeded. Please export some records and clear them before adding more, or use fewer/lower quality photos.');
+                    return;
+                }
+                
+                savedRecords.push(data);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecords));
+                
+                // Refresh the display
+                displayRecords();
+                updateStats();
+                
+                // Show success message
+                document.getElementById('outputBox').innerText = 
+                    `✅ Record saved successfully!\n\n` +
+                    `Observer: ${data.observer}\n` +
+                    `Date: ${data.collectionDate}\n` +
+                    `Species: ${data.species}\n` +
+                    `Location: ${data.location.region} (${data.location.locationMode === 'precise_map' ? 'Map' : 'Quick Region'})\n` +
+                    `Coordinates: ${data.location.latitude}, ${data.location.longitude}\n` +
+                    `Weather: ${data.weather.minTemp || '--'}°C / ${data.weather.maxTemp || '--'}°C (${data.weather.dataType})\n` +
+                    `Photos: ${data.photos.length}\n\n` +
+                    `Total records: ${savedRecords.length}`;
+                
+                // Reset form for next entry
+                resetForm();
+                
+            } catch (quotaError) {
+                console.error('Quota exceeded:', quotaError);
+                alert('Storage quota exceeded. Please export some records and clear them before adding more, or use smaller photos.');
+            }
             
-            // Show success message
-            document.getElementById('outputBox').innerText = 
-                `✅ Record saved successfully!\n\n` +
-                `Observer: ${data.observer}\n` +
-                `Date: ${data.collectionDate}\n` +
-                `Species: ${data.species}\n` +
-                `Location: ${data.location.region}\n` +
-                `Weather: ${data.weather.minTemp || '--'}°C / ${data.weather.maxTemp || '--'}°C (${data.weather.dataType})\n` +
-                `Photos: ${data.photos.length}\n\n` +
-                `Total records: ${savedRecords.length}`;
-            
-            // Reset form for next entry
-            resetForm();
         }).catch(error => {
             console.error('Error saving photos:', error);
-            alert('Error saving photos. Please try again.');
+            alert('Error saving photos. Please try again. Error: ' + error.message);
         });
+    }
+
+    // Check storage usage
+    function checkStorageUsage() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                const totalSize = new Blob([data]).size;
+                const totalSizeMB = totalSize / (1024 * 1024);
+                const percentUsed = (totalSize / (5 * 1024 * 1024)) * 100;
+                
+                if (totalSizeMB > 4) {
+                    document.getElementById('outputBox').innerText = 
+                        `⚠️ Storage warning: ${totalSizeMB.toFixed(1)}MB / 5MB used (${percentUsed.toFixed(0)}%)\n` +
+                        `Please export and clear some records to free up space.`;
+                }
+            }
+        } catch (e) {
+            console.log('Could not check storage usage');
+        }
     }
 
     // Import data from JSON file
@@ -2646,12 +2724,16 @@
             const hasPhotos = record.photos && record.photos.length > 0;
             const weatherSource = record.weather && record.weather.dataType === "Open-Meteo Auto" ? " (auto)" : "";
             const displaySpecies = record.species ? record.species.split(' ').slice(0, 2).join(' ') : 'Unknown';
+            const locationIcon = record.location.locationMode === 'precise_map' ? '🗺️' : '📍';
+            const locationDisplay = record.location.locationMode === 'precise_map' 
+                ? (record.location.siteName || 'Map pin') 
+                : record.location.region.split(' ')[0];
             
             return `
                 <div class="record-card" onclick="selectRecord(${savedRecords.indexOf(record)})">
                     <div class="record-date">📅 ${record.collectionDate}</div>
                     <div class="record-species">🌿 <i>${displaySpecies}</i></div>
-                    <div class="record-location">📍 ${record.location ? record.location.region.split(' ')[0] : 'Unknown'}</div>
+                    <div class="record-location">${locationIcon} ${locationDisplay}</div>
                     ${record.weather && record.weather.minTemp && record.weather.maxTemp ? 
                         `<div class="record-weather">🌡️ ${record.weather.minTemp}°C / ${record.weather.maxTemp}°C${weatherSource}</div>` : ''}
                     ${hasPhotos ? 
@@ -2693,14 +2775,18 @@
         document.getElementById('speciesSelect').value = record.species;
         updateSpeciesInfo();
         
-        let regionCode = 'south';
-        for (const [code, preset] of Object.entries(regionPresets)) {
-            if (preset.name === record.location.region) {
-                regionCode = code;
-                break;
+        // Only set region if it was from quick region mode
+        if (record.location.locationMode === 'quick_region') {
+            for (const [code, preset] of Object.entries(regionPresets)) {
+                if (preset.name === record.location.region) {
+                    document.getElementById('regionSelect').value = code;
+                    break;
+                }
             }
+        } else {
+            // Default to south if map mode
+            document.getElementById('regionSelect').value = 'south';
         }
-        document.getElementById('regionSelect').value = regionCode;
         
         document.getElementById('bud').checked = record.phenology.flowering.bud;
         document.getElementById('earlyFlower').checked = record.phenology.flowering.earlyFlower;
@@ -2739,7 +2825,7 @@
                     name: photo.name,
                     type: photo.type,
                     size: photo.size,
-                    data: photo.data,  // Keep the data URL
+                    data: photo.data,
                     isDataUrl: true
                 };
             });
@@ -2851,6 +2937,7 @@
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
             'Location Mode': record.locationMode,
+            'Location Type': record.location.locationMode === 'precise_map' ? 'Precise Map' : 'Quick Region',
             'Observer': record.observer,
             'Collection Date': record.collectionDate,
             'Species': record.species,
@@ -2858,6 +2945,7 @@
             'Site Name': record.location ? record.location.siteName || '' : '',
             'Latitude': record.location ? record.location.latitude : '',
             'Longitude': record.location ? record.location.longitude : '',
+            'Coordinate Source': record.location ? record.location.coordinateSource : '',
             'Flowering - Bud': record.phenology ? record.phenology.flowering.bud : '',
             'Flowering - Early': record.phenology ? record.phenology.flowering.earlyFlower : '',
             'Flowering - Full': record.phenology ? record.phenology.flowering.fullFlower : '',
@@ -2911,6 +2999,8 @@
         
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
+            'Location Mode': record.locationMode,
+            'Location Type': record.location.locationMode === 'precise_map' ? 'Precise Map' : 'Quick Region',
             'Observer': record.observer,
             'Collection Date': record.collectionDate,
             'Species': record.species,
@@ -2954,7 +3044,9 @@
 
     // Reset form
     function resetForm() {
-        document.getElementById('observer').value = savedObserver;
+        // Store current observer before reset
+        const currentObserver = document.getElementById('observer').value.trim();
+        
         document.getElementById('obsDate').value = '2026-02-26';
         document.getElementById('siteName').value = '';
         document.getElementById('lat').value = '-42.88';
@@ -2983,6 +3075,16 @@
         document.getElementById('notes').value = '';
         document.getElementById('speciesSelect').value = 'Acacia verticillata';
         document.getElementById('regionSelect').value = 'south';
+        
+        // Restore observer - either from saved or current
+        if (currentObserver) {
+            document.getElementById('observer').value = currentObserver;
+            // Save to localStorage
+            localStorage.setItem(OBSERVER_KEY, currentObserver);
+            savedObserver = currentObserver;
+        } else if (savedObserver) {
+            document.getElementById('observer').value = savedObserver;
+        }
         
         lastWeatherData = null;
         
@@ -3048,6 +3150,9 @@
         if (savedRecords.length > 0) {
             document.getElementById('outputBox').innerText = `📊 Welcome back! You have ${savedRecords.length} saved record(s).`;
         }
+        
+        // Check storage on load
+        checkStorageUsage();
     };
 </script>
 </body>
