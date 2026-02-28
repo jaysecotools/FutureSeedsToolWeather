@@ -1428,7 +1428,7 @@
                     
                     <!-- AUTO WEATHER CONTROLS -->
                     <div class="weather-controls">
-                        <button class="weather-auto-btn" onclick="loadCurrentWeather()" id="autoWeatherBtn">
+                        <button class="weather-auto-btn" onclick="loadCurrentWeather(true)" id="autoWeatherBtn">
                             <span>🌤️</span> Auto-load Current Weather
                         </button>
                         <span class="weather-source">
@@ -1582,6 +1582,13 @@
     // Track location mode
     let usingMapMode = false;
 
+    // Weather loading state
+    let isLoadingWeather = false;
+    let weatherLoadTimeout = null;
+    
+    // Store the last loaded weather data
+    let lastWeatherData = null;
+
     // Templates
     const templates = {
         postFire: {
@@ -1611,73 +1618,7 @@
     let map;
     let marker;
 
-    // NEW: Auto-weather loading function
-    async function loadCurrentWeather() {
-        const lat = document.getElementById('lat').value;
-        const lon = document.getElementById('lon').value;
-        const autoBtn = document.getElementById('autoWeatherBtn');
-        const originalText = autoBtn.innerHTML;
-        
-        try {
-            // Show loading state
-            autoBtn.innerHTML = '<span>⏳</span> Loading weather...';
-            autoBtn.disabled = true;
-            document.getElementById('outputBox').innerText = '🌤️ Loading weather data from Open-Meteo...';
-            
-            // Open-Meteo API - no API key required
-            const response = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=temperature_2m_min,temperature_2m_max&timezone=auto`
-            );
-            
-            if (!response.ok) {
-                throw new Error('Weather service temporarily unavailable');
-            }
-            
-            const data = await response.json();
-            
-            if (data.current && data.daily) {
-                // Fill in the weather fields
-                const minTemp = data.daily.temperature_2m_min[0];
-                const maxTemp = data.daily.temperature_2m_max[0];
-                
-                document.getElementById('actualMinTemp').value = minTemp.toFixed(1);
-                document.getElementById('actualMaxTemp').value = maxTemp.toFixed(1);
-                
-                // Add station info
-                const weatherDescription = getWeatherDescription(data.current.weather_code);
-                document.getElementById('bomStation').value = `Open-Meteo - ${weatherDescription} (${data.timezone})`;
-                
-                // Update display
-                updateTempDisplay();
-                
-                // Show success message with current conditions
-                document.getElementById('outputBox').innerText = 
-                    `✅ Weather loaded successfully!\n` +
-                    `📍 Location: ${lat}, ${lon}\n` +
-                    `🌡️ Current: ${data.current.temperature_2m}°C\n` +
-                    `📊 Today's range: ${minTemp.toFixed(1)}°C - ${maxTemp.toFixed(1)}°C\n` +
-                    `☁️ Conditions: ${weatherDescription}\n` +
-                    `💧 Humidity: ${data.current.relative_humidity_2m}%\n` +
-                    `⚡ Data from Open-Meteo (free, no API key)`;
-            } else {
-                throw new Error('Invalid weather data received');
-            }
-        } catch (error) {
-            console.error('Weather fetch failed:', error);
-            document.getElementById('outputBox').innerText = '❌ Failed to load weather data. Please try again or enter manually.';
-            
-            // Show more specific error message
-            if (error.message.includes('Failed to fetch')) {
-                document.getElementById('outputBox').innerText += ' Network connection issue.';
-            }
-        } finally {
-            // Restore button state
-            autoBtn.innerHTML = originalText;
-            autoBtn.disabled = false;
-        }
-    }
-
-    // Helper function to get weather description from WMO code
+    // Weather helper function to get description from WMO code
     function getWeatherDescription(code) {
         const weatherCodes = {
             0: 'Clear sky',
@@ -1712,7 +1653,141 @@
         return weatherCodes[code] || 'Unknown conditions';
     }
 
-    // NEW: Initialize species dropdown
+    // Auto-weather loading function
+    async function loadCurrentWeather(showFeedback = true) {
+        // Prevent multiple simultaneous loads
+        if (isLoadingWeather) {
+            console.log('Weather load already in progress');
+            return;
+        }
+        
+        const lat = document.getElementById('lat').value;
+        const lon = document.getElementById('lon').value;
+        const autoBtn = document.getElementById('autoWeatherBtn');
+        const originalText = autoBtn ? autoBtn.innerHTML : '<span>🌤️</span> Auto-load Current Weather';
+        
+        // Clear any pending timeout
+        if (weatherLoadTimeout) {
+            clearTimeout(weatherLoadTimeout);
+            weatherLoadTimeout = null;
+        }
+        
+        try {
+            isLoadingWeather = true;
+            
+            // Show loading state only if showFeedback is true
+            if (showFeedback && autoBtn) {
+                autoBtn.innerHTML = '<span>⏳</span> Loading weather...';
+                autoBtn.disabled = true;
+            }
+            document.getElementById('outputBox').innerText = '🌤️ Loading weather data from Open-Meteo...';
+            
+            // Open-Meteo API - no API key required
+            const response = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,pressure_msl&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`
+            );
+            
+            if (!response.ok) {
+                throw new Error('Weather service temporarily unavailable');
+            }
+            
+            const data = await response.json();
+            
+            if (data.current && data.daily) {
+                // Store the full weather data
+                lastWeatherData = {
+                    latitude: parseFloat(lat),
+                    longitude: parseFloat(lon),
+                    current: {
+                        temperature: data.current.temperature_2m,
+                        humidity: data.current.relative_humidity_2m,
+                        weatherCode: data.current.weather_code,
+                        weatherDescription: getWeatherDescription(data.current.weather_code),
+                        windSpeed: data.current.wind_speed_10m,
+                        pressure: data.current.pressure_msl,
+                        timestamp: new Date().toISOString()
+                    },
+                    daily: {
+                        minTemp: data.daily.temperature_2m_min[0],
+                        maxTemp: data.daily.temperature_2m_max[0],
+                        precipitation: data.daily.precipitation_sum[0],
+                        date: data.daily.time[0]
+                    },
+                    timezone: data.timezone
+                };
+                
+                // Fill in the weather fields
+                const minTemp = lastWeatherData.daily.minTemp;
+                const maxTemp = lastWeatherData.daily.maxTemp;
+                
+                document.getElementById('actualMinTemp').value = minTemp.toFixed(1);
+                document.getElementById('actualMaxTemp').value = maxTemp.toFixed(1);
+                
+                // Add station info with all weather details
+                document.getElementById('bomStation').value = `Open-Meteo - ${lastWeatherData.current.weatherDescription} (${lastWeatherData.current.temperature}°C, ${lastWeatherData.current.humidity}% RH, wind ${lastWeatherData.current.windSpeed} km/h)`;
+                
+                // Update display
+                updateTempDisplay();
+                
+                // Show success message in output box with full details
+                document.getElementById('outputBox').innerText = 
+                    `✅ Weather loaded successfully!\n` +
+                    `📍 Location: ${lat}, ${lon}\n` +
+                    `🌡️ Current: ${lastWeatherData.current.temperature}°C\n` +
+                    `💧 Humidity: ${lastWeatherData.current.humidity}%\n` +
+                    `💨 Wind: ${lastWeatherData.current.windSpeed} km/h\n` +
+                    `📊 Today's range: ${minTemp.toFixed(1)}°C - ${maxTemp.toFixed(1)}°C\n` +
+                    `☁️ Conditions: ${lastWeatherData.current.weatherDescription}\n` +
+                    `🌧️ Precipitation: ${lastWeatherData.daily.precipitation} mm\n` +
+                    `⚡ Data from Open-Meteo (free, no API key)`;
+                
+                // Change button to "Loaded!" temporarily only if showFeedback is true
+                if (showFeedback && autoBtn) {
+                    autoBtn.innerHTML = '<span>✅</span> Loaded! ✓';
+                    // Set timeout to revert button
+                    weatherLoadTimeout = setTimeout(() => {
+                        if (autoBtn) {
+                            autoBtn.innerHTML = originalText;
+                            autoBtn.disabled = false;
+                        }
+                        weatherLoadTimeout = null;
+                    }, 2000);
+                } else if (autoBtn) {
+                    // Just re-enable without changing text
+                    autoBtn.disabled = false;
+                }
+            } else {
+                throw new Error('Invalid weather data received');
+            }
+        } catch (error) {
+            console.error('Weather fetch failed:', error);
+            document.getElementById('outputBox').innerText = '❌ Failed to load weather data. Please try again or enter manually.';
+            
+            // Show error state on button only if showFeedback is true
+            if (showFeedback && autoBtn) {
+                autoBtn.innerHTML = '<span>❌</span> Failed - Try Again';
+                // Set timeout to revert button
+                weatherLoadTimeout = setTimeout(() => {
+                    if (autoBtn) {
+                        autoBtn.innerHTML = originalText;
+                        autoBtn.disabled = false;
+                    }
+                    weatherLoadTimeout = null;
+                }, 2000);
+            } else if (autoBtn) {
+                autoBtn.disabled = false;
+            }
+            
+            // Show more specific error message
+            if (error.message.includes('Failed to fetch')) {
+                document.getElementById('outputBox').innerText += ' Network connection issue.';
+            }
+        } finally {
+            isLoadingWeather = false;
+        }
+    }
+
+    // Initialize species dropdown
     function initializeSpeciesDropdown() {
         const select = document.getElementById('speciesSelect');
         select.innerHTML = '';
@@ -1737,7 +1812,7 @@
         updateRemoveButtonVisibility();
     }
 
-    // NEW: Update remove button visibility
+    // Update remove button visibility
     function updateRemoveButtonVisibility() {
         const select = document.getElementById('speciesSelect');
         const removeBtn = document.getElementById('removeSpeciesBtn');
@@ -1750,18 +1825,18 @@
         }
     }
 
-    // NEW: Show add species input
+    // Show add species input
     function showAddSpeciesPrompt() {
         document.getElementById('customSpeciesInput').style.display = 'flex';
     }
 
-    // NEW: Cancel adding species
+    // Cancel adding species
     function cancelAddSpecies() {
         document.getElementById('customSpeciesInput').style.display = 'none';
         document.getElementById('newSpeciesName').value = '';
     }
 
-    // NEW: Add custom species
+    // Add custom species
     function addCustomSpecies() {
         const newSpecies = document.getElementById('newSpeciesName').value.trim();
         
@@ -1794,7 +1869,7 @@
         cancelAddSpecies();
     }
 
-    // NEW: Remove custom species
+    // Remove custom species
     function removeCustomSpecies() {
         const select = document.getElementById('speciesSelect');
         const currentValue = select.value;
@@ -1906,8 +1981,8 @@
                 
                 document.getElementById('outputBox').innerText = `📍 Location captured: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
                 
-                // Auto-load weather for this location
-                setTimeout(() => loadCurrentWeather(), 500);
+                // Auto-load weather for this location (without button feedback)
+                setTimeout(() => loadCurrentWeather(false), 500);
             },
             (error) => {
                 let errorMessage = 'Location error: ';
@@ -1987,13 +2062,13 @@
         
         if (fromMap) {
             document.getElementById('coordSource').value = 'Map selection';
-            // Auto-load weather when map location is set
-            setTimeout(() => loadCurrentWeather(), 500);
+            // Auto-load weather when map location is set (without button feedback)
+            setTimeout(() => loadCurrentWeather(false), 500);
         } else {
             const region = document.getElementById('regionSelect').value;
             document.getElementById('coordSource').value = `Quick Region (${regionPresets[region].name})`;
-            // Optionally load weather for region too
-            setTimeout(() => loadCurrentWeather(), 500);
+            // Auto-load weather for region (without button feedback)
+            setTimeout(() => loadCurrentWeather(false), 500);
         }
     }
 
@@ -2027,7 +2102,7 @@
             const d = new Date(dateStr + 'T12:00:00');
             return d.getMonth();
         }
-        return 1;
+        return new Date().getMonth();
     }
 
     // Update month display
@@ -2308,6 +2383,29 @@
             return val || null;
         };
 
+        // Build weather object with all available data
+        const weatherData = {
+            month: monthName,
+            year: 2026,
+            minTemp: getOptionalNumber('actualMinTemp'),
+            maxTemp: getOptionalNumber('actualMaxTemp'),
+            station: getOptionalString('bomStation'),
+            stationId: getOptionalString('stationId'),
+            dataType: lastWeatherData ? "Open-Meteo Auto" : "Manual Entry"
+        };
+
+        // If we have lastWeatherData, include all the detailed weather info
+        if (lastWeatherData) {
+            weatherData.autoWeather = {
+                latitude: lastWeatherData.latitude,
+                longitude: lastWeatherData.longitude,
+                current: lastWeatherData.current,
+                daily: lastWeatherData.daily,
+                timezone: lastWeatherData.timezone,
+                loadedAt: lastWeatherData.current.timestamp
+            };
+        }
+
         return {
             id: Date.now(),
             timestamp: new Date().toISOString(),
@@ -2349,15 +2447,7 @@
                 fire: getOptionalString('fireHistory'),
                 notes: getOptionalString('notes')
             },
-            weather: {
-                month: monthName,
-                year: 2026,
-                minTemp: getOptionalNumber('actualMinTemp'),
-                maxTemp: getOptionalNumber('actualMaxTemp'),
-                station: getOptionalString('bomStation'),
-                stationId: getOptionalString('stationId'),
-                dataType: "Manual BOM entry"
-            },
+            weather: weatherData,
             photos: [] // Will be populated with full photo data when saving
         };
     }
@@ -2455,6 +2545,7 @@
         grid.innerHTML = savedRecords.map((record, index) => {
             // Check if record has photos and display indicator
             const hasPhotos = record.photos && record.photos.length > 0;
+            const weatherSource = record.weather && record.weather.dataType === "Open-Meteo Auto" ? " (auto)" : "";
             
             return `
                 <div class="record-card" onclick="selectRecord(${index})">
@@ -2462,7 +2553,7 @@
                     <div class="record-species">🌿 <i>${record.species ? record.species.split(' ')[0] : ''} ${record.species ? record.species.split(' ')[1] || '' : ''}</i></div>
                     <div class="record-location">📍 ${record.location ? record.location.region : 'Unknown'}</div>
                     ${record.weather && record.weather.minTemp && record.weather.maxTemp ? 
-                        `<div class="record-weather">🌡️ ${record.weather.minTemp}°C / ${record.weather.maxTemp}°C</div>` : ''}
+                        `<div class="record-weather">🌡️ ${record.weather.minTemp}°C / ${record.weather.maxTemp}°C${weatherSource}</div>` : ''}
                     ${hasPhotos ? 
                         `<div class="record-photo-indicator">📸 ${record.photos.length} photo(s)</div>` : ''}
                     <div class="record-actions">
@@ -2531,6 +2622,11 @@
         document.getElementById('actualMaxTemp').value = record.weather.maxTemp || '';
         document.getElementById('bomStation').value = record.weather.station || '';
         document.getElementById('stationId').value = record.weather.stationId || '';
+        
+        // Restore lastWeatherData if available
+        if (record.weather.autoWeather) {
+            lastWeatherData = record.weather.autoWeather;
+        }
         
         document.getElementById('seedMaturity').value = record.phenology.seedMaturity || '';
         document.getElementById('fireHistory').value = record.siteHistory.fire || '';
@@ -2646,7 +2742,8 @@
                 quick: savedRecords.filter(r => r.locationMode === 'quick_region').length
             },
             totalPhotos: savedRecords.reduce((sum, r) => sum + (r.photos?.length || 0), 0),
-            weatherRecords: savedRecords.filter(r => r.weather && r.weather.minTemp).length
+            weatherRecords: savedRecords.filter(r => r.weather && r.weather.minTemp).length,
+            autoWeatherRecords: savedRecords.filter(r => r.weather && r.weather.dataType === "Open-Meteo Auto").length
         };
         
         savedRecords.forEach(r => {
@@ -2664,6 +2761,7 @@
             `Species Count: ${stats.speciesCount}\n` +
             `Total Photos: ${stats.totalPhotos}\n` +
             `Weather Records: ${stats.weatherRecords}\n` +
+            `  ↳ Auto-weather: ${stats.autoWeatherRecords}\n` +
             `📍 Precise Map Records: ${stats.locationModes.precise}\n` +
             `⚡ Quick Region Records: ${stats.locationModes.quick}\n\n`;
         
@@ -2678,7 +2776,7 @@
         document.getElementById('outputBox').innerText = output;
     }
 
-    // NEW FUNCTION: Export ALL records as JSON
+    // Export ALL records as JSON
     function exportAllJSON() {
         if (savedRecords.length === 0) {
             alert('No records to export');
@@ -2697,14 +2795,14 @@
         document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to JSON`;
     }
 
-    // NEW FUNCTION: Export ALL records as Excel
+    // Export ALL records as Excel
     function exportAllExcel() {
         if (savedRecords.length === 0) {
             alert('No records to export');
             return;
         }
         
-        // Flatten each record for Excel
+        // Flatten each record for Excel with all weather details
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
             'Location Mode': record.locationMode,
@@ -2739,6 +2837,16 @@
             'Actual Max Temp (°C)': record.weather ? record.weather.maxTemp || '' : '',
             'BOM Station': record.weather ? record.weather.station || '' : '',
             'Station ID': record.weather ? record.weather.stationId || '' : '',
+            'Weather Data Source': record.weather ? record.weather.dataType || '' : '',
+            // Auto-weather detailed fields
+            'Auto Weather - Current Temp (°C)': record.weather?.autoWeather?.current?.temperature || '',
+            'Auto Weather - Humidity (%)': record.weather?.autoWeather?.current?.humidity || '',
+            'Auto Weather - Conditions': record.weather?.autoWeather?.current?.weatherDescription || '',
+            'Auto Weather - Wind Speed (km/h)': record.weather?.autoWeather?.current?.windSpeed || '',
+            'Auto Weather - Pressure (hPa)': record.weather?.autoWeather?.current?.pressure || '',
+            'Auto Weather - Precipitation (mm)': record.weather?.autoWeather?.daily?.precipitation || '',
+            'Auto Weather - Timezone': record.weather?.autoWeather?.timezone || '',
+            'Auto Weather - Loaded At': record.weather?.autoWeather?.loadedAt || '',
             'Photo Count': record.photos ? record.photos.length : 0,
             'Record Timestamp': record.timestamp
         }));
@@ -2751,17 +2859,17 @@
         
         XLSX.writeFile(wb, filename);
         
-        document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to Excel`;
+        document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to Excel with full weather data`;
     }
 
-    // NEW FUNCTION: Export ALL records as CSV
+    // Export ALL records as CSV
     function exportAllCSV() {
         if (savedRecords.length === 0) {
             alert('No records to export');
             return;
         }
         
-        // Flatten each record for CSV (simplified version)
+        // Flatten each record for CSV with key weather details
         const flatData = savedRecords.map(record => ({
             'Program': record.program,
             'Observer': record.observer,
@@ -2773,6 +2881,12 @@
             'Longitude': record.location ? record.location.longitude : '',
             'Min Temp': record.weather ? record.weather.minTemp || '' : '',
             'Max Temp': record.weather ? record.weather.maxTemp || '' : '',
+            'Weather Source': record.weather ? record.weather.dataType || '' : '',
+            'Current Temp': record.weather?.autoWeather?.current?.temperature || '',
+            'Conditions': record.weather?.autoWeather?.current?.weatherDescription || '',
+            'Humidity': record.weather?.autoWeather?.current?.humidity || '',
+            'Wind Speed': record.weather?.autoWeather?.current?.windSpeed || '',
+            'Precipitation': record.weather?.autoWeather?.daily?.precipitation || '',
             'Fire History': record.siteHistory ? record.siteHistory.fire || '' : '',
             'Notes': record.siteHistory ? record.siteHistory.notes || '' : ''
         }));
@@ -2797,7 +2911,7 @@
         a.click();
         window.URL.revokeObjectURL(url);
         
-        document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to CSV`;
+        document.getElementById('outputBox').innerText = `✅ Exported ${savedRecords.length} records to CSV with weather data`;
     }
 
     // Reset form
@@ -2831,6 +2945,9 @@
         document.getElementById('notes').value = '';
         document.getElementById('speciesSelect').value = 'Acacia verticillata';
         document.getElementById('regionSelect').value = 'south';
+        
+        // Clear weather data
+        lastWeatherData = null;
         
         selectedPhotos = [];
         document.getElementById('photoPreview').innerHTML = '';
