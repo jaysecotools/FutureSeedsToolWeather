@@ -1,4 +1,4 @@
-<!-- Shaer data function added. Now includes feedback for pc. -->
+<!-- Share data function added. Now includes feedback for pc. -->
 
 <!-- Developed by Jay Rowley for TasTAFE Future Seeds Program 2026 -->
 
@@ -1570,42 +1570,44 @@
 
     // ========== NEW SHARE FUNCTIONALITY ==========
     
-// Main share function - UPDATED with better desktop feedback
+// Main share function - CLEANED UP
 async function shareData() {
-    // Check if Web Share API is supported
     if (!navigator.share) {
-        // Better desktop fallback - copy to clipboard instead
+        // Desktop fallback - copy to clipboard
         const recordCount = savedRecords.length;
-        const summary = `🌱 Future Seeds Program\n📊 Total Records: ${recordCount}\n🔗 ${window.location.href}`;
+        const summary = `🌱 Future Seeds Program\n📊 Total Records: ${recordCount}\n📅 Last updated: ${new Date().toLocaleDateString()}\n🔗 ${window.location.href}`;
         
         try {
             await navigator.clipboard.writeText(summary);
-            alert('📋 Summary copied to clipboard! (Sharing is mobile-only, but you can paste this anywhere)');
+            alert('📋 Summary copied to clipboard!');
         } catch (clipboardError) {
-            alert('Sharing is only available on mobile devices. Please use the export buttons instead.');
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = summary;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('📋 Summary copied to clipboard!');
         }
         return;
     }
     
-    // Rest of the mobile sharing code remains the same...
     try {
-        // Get a summary of the current data
         const recordCount = savedRecords.length;
-        const lastRecord = savedRecords.length > 0 ? savedRecords[savedRecords.length - 1] : null;
         
-        // Create a shareable text summary
-        let shareText = `🌱 Future Seeds Program - Data Summary\n`;
+        let shareText = `🌱 Future Seeds Program\n`;
         shareText += `📊 Total Records: ${recordCount}\n`;
         
         if (recordCount > 0) {
-            // Add species breakdown
+            // Species breakdown
             const speciesCount = {};
             savedRecords.forEach(r => {
                 const species = r.species || 'Unknown';
                 speciesCount[species] = (speciesCount[species] || 0) + 1;
             });
             
-            shareText += `🌿 Species recorded:\n`;
+            shareText += `🌿 Species:\n`;
             Object.entries(speciesCount).slice(0, 3).forEach(([species, count]) => {
                 const shortName = species.split(' ').slice(0, 2).join(' ');
                 shareText += `   • ${shortName}: ${count}\n`;
@@ -1614,65 +1616,29 @@ async function shareData() {
             if (Object.keys(speciesCount).length > 3) {
                 shareText += `   • ... and ${Object.keys(speciesCount).length - 3} more\n`;
             }
-            
-            // Add date range
-            const dates = savedRecords.map(r => r.collectionDate).sort();
-            if (dates.length > 0) {
-                shareText += `📅 Date range: ${dates[0]} to ${dates[dates.length-1]}\n`;
-            }
-            
-            // Add location info
-            const locations = new Set(savedRecords.map(r => r.location?.region).filter(Boolean));
-            if (locations.size > 0) {
-                shareText += `📍 Regions: ${Array.from(locations).join(', ')}\n`;
-            }
         }
         
-        shareText += `\n🔗 Open the app: ${window.location.href}`;
+        shareText += `\n🔗 ${window.location.href}`;
         
-        // Prepare share data
-        const shareData = {
+        await navigator.share({
             title: 'Future Seeds Program Data',
             text: shareText,
             url: window.location.href,
-        };
+        });
         
-        // Try to share a file if there are records and we're on a modern browser
-        if (savedRecords.length > 0 && navigator.canShare) {
-            try {
-                // Create a simple JSON export of the last 5 records as a sample
-                const sampleData = savedRecords.slice(-5); // Last 5 records
-                const jsonStr = JSON.stringify(sampleData, null, 2);
-                const file = new File([jsonStr], 'future-seeds-sample.json', { type: 'application/json' });
-                
-                // Check if files can be shared
-                if (navigator.canShare({ files: [file] })) {
-                    shareData.files = [file];
-                }
-            } catch (fileError) {
-                console.log('File sharing not supported, falling back to text only');
-            }
-        }
-        
-        // Trigger the share dialog
-        await navigator.share(shareData);
-        
-        // Success message
         document.getElementById('outputBox').innerText = '✅ Data shared successfully!';
         
     } catch (err) {
-        // User cancelled or sharing failed
         if (err.name !== 'AbortError') {
             console.error('Share failed:', err);
-            document.getElementById('outputBox').innerText = '❌ Sharing failed. Use export buttons instead.';
+            document.getElementById('outputBox').innerText = '❌ Sharing failed: ' + err.message;
         }
     }
 }
-
-// Share a single record - UPDATED with better desktop feedback
+// Share a single record - FIXED VERSION
 async function shareSingleRecord(index) {
     if (!navigator.share) {
-        // Desktop fallback
+        // Desktop fallback - copy to clipboard
         const record = savedRecords[index];
         if (!record) return;
         
@@ -1686,19 +1652,37 @@ async function shareSingleRecord(index) {
         
         try {
             await navigator.clipboard.writeText(summary);
-            alert('📋 Record summary copied to clipboard! (Sharing is mobile-only)');
+            alert('📋 Record summary copied to clipboard!');
         } catch (clipboardError) {
-            alert('Sharing is only available on mobile devices.');
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = summary;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('📋 Record summary copied to clipboard!');
         }
         return;
     }
     
-    // Mobile sharing code remains...
+    // Mobile sharing code - FIXED
     const record = savedRecords[index];
     if (!record) return;
     
     try {
-        // Create a readable summary of the record
+        // Get flowering stages that are true
+        const floweringStages = Object.entries(record.phenology?.flowering || {})
+            .filter(([key, value]) => value && key !== 'none')
+            .map(([key]) => key)
+            .join(', ') || 'None';
+        
+        // Get pollinators that are true (excluding 'other' and 'none')
+        const pollinatorTypes = Object.entries(record.phenology?.pollinators || {})
+            .filter(([key, value]) => value && key !== 'other' && key !== 'none')
+            .map(([key]) => key)
+            .join(', ') || 'None';
+        
         const shareText = 
             `🌱 Future Seeds Record\n` +
             `📅 Date: ${record.collectionDate}\n` +
@@ -1706,14 +1690,8 @@ async function shareSingleRecord(index) {
             `🌿 Species: ${record.species}\n` +
             `📍 Location: ${record.location?.region || 'Unknown'}\n` +
             `📍 Coordinates: ${record.location?.latitude}, ${record.location?.longitude}\n` +
-            `🌼 Flowering: ${Object.entries(record.phenology?.flowering || {})
-                .filter(([_, v]) => v)
-                .map(([k]) => k)
-                .join(', ') || 'None'}\n` +
-            `🐝 Pollinators: ${Object.entries(record.phenology?.pollinators || {})
-                .filter(([_, v]) => v && k !== 'other')
-                .map(([k]) => k)
-                .join(', ') || 'None'}\n` +
+            `🌼 Flowering: ${floweringStages}\n` +
+            `🐝 Pollinators: ${pollinatorTypes}\n` +
             (record.weather?.minTemp ? `🌡️ Temp: ${record.weather.minTemp}°C - ${record.weather.maxTemp}°C\n` : '') +
             (record.photos?.length ? `📸 Photos: ${record.photos.length}\n` : '') +
             `\n🔗 ${window.location.href}`;
@@ -1727,10 +1705,10 @@ async function shareSingleRecord(index) {
     } catch (err) {
         if (err.name !== 'AbortError') {
             console.error('Share failed:', err);
+            alert('Sharing failed: ' + err.message);
         }
     }
 }
-
     // ========== END NEW SHARE FUNCTIONALITY ==========
 
     // Weather helper function to get description from WMO code
