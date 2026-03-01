@@ -1,3 +1,5 @@
+<!-- Shaer data function added. Now includes feedback for pc. -->
+
 <!-- Developed by Jay Rowley for TasTAFE Future Seeds Program 2026 -->
 
 <!DOCTYPE html>
@@ -54,6 +56,28 @@
             border-radius: 60px;
             color: #1f4a1f;
             font-weight: 700;
+        }
+        .program-badge {
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            opacity: 0.9;
+        }
+        .new-badge {
+            background: #f0c34a;
+            color: #1f4a1f;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 30px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
+            display: inline-block;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background: #ffd966; }
+            100% { transform: scale(1); }
         }
         .guide-toggle {
             background: #3a7b4a;
@@ -136,23 +160,6 @@
             font-weight: 600;
             margin-left: 5px;
             text-transform: uppercase;
-        }
-        .new-badge {
-            background: #f0c34a;
-            color: #1f4a1f;
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 30px;
-            margin-left: 8px;
-            text-transform: uppercase;
-            animation: pulse 2s infinite;
-            display: inline-block;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); background: #ffd966; }
-            100% { transform: scale(1); }
         }
         .region-bar {
             background: #31754a;
@@ -832,7 +839,13 @@
             color: white;
             box-shadow: 0 6px 0 #5a4a2e;
         }
-        .btn-primary:hover, .btn-excel:hover, .btn-save:hover, .btn-csv:hover, .btn-import:hover {
+        .btn-share {
+            background: #4a90e2;
+            border-color: #f5bc3c;
+            color: white;
+            box-shadow: 0 6px 0 #2a5080;
+        }
+        .btn-primary:hover, .btn-excel:hover, .btn-save:hover, .btn-csv:hover, .btn-import:hover, .btn-share:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 0 #1f591f;
         }
@@ -844,6 +857,9 @@
         }
         .btn-import:hover {
             background: #a5855a;
+        }
+        .btn-share:hover {
+            background: #5a9ef2;
         }
         .records-section {
             background: #e3d8b0;
@@ -1089,63 +1105,11 @@
             margin-top: 5px;
             font-style: italic;
         }
-        /* Styles for custom species input */
-        .species-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .custom-species-input {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-        .custom-species-input input {
-            border: 2px solid #a5b77a;
-            border-radius: 50px;
-            padding: 8px 12px;
-            font-size: 0.9rem;
-            min-width: 180px;
-        }
-        .add-species-btn {
-            background: #4a90e2;
-            border: none;
-            border-radius: 50px;
-            padding: 8px 15px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-        .add-species-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 0 #2a5080;
-            background: #5a9ef2;
-        }
-        .remove-species-btn {
-            background: #d16b4b;
-            border: none;
-            border-radius: 50px;
-            padding: 8px 15px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-left: 5px;
-            white-space: nowrap;
-        }
-        .remove-species-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 0 #994f34;
-            background: #e07a5a;
-        }
-        .species-dropdown-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
+        .share-note {
+            font-size: 0.8rem;
+            color: #4a90e2;
+            margin-top: 5px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -1156,7 +1120,7 @@
             🌱 FUTURE SEEDS PROGRAM 
             <span>DATA COLLECTOR</span>
         </h1>
-        <div class="program-badge">⚡ interactive map · quick region · camera ready · data import · auto weather <span class="new-badge">NEW</span></div>
+        <div class="program-badge">⚡ interactive map · quick region · camera ready · data import · auto weather · share <span class="new-badge">NEW</span></div>
     </div>
 
     <!-- Instructions Toggle -->
@@ -1229,11 +1193,12 @@
                 </ul>
             </div>
             <div class="guide-step">
-                <h3>💾 9. Save & Export</h3>
+                <h3>💾 9. Save & Export <span class="new-badge">NEW · Share</span></h3>
                 <ul>
                     <li>Save to local storage - records appear immediately below</li>
                     <li>Export as JSON, Excel, or CSV with full weather data</li>
                     <li><strong>Import Data:</strong> Load previously exported JSON</li>
+                    <li><strong>Share:</strong> Use the Share button to send data summaries or the app link</li>
                     <li>Edit or delete existing records</li>
                 </ul>
             </div>
@@ -1243,24 +1208,13 @@
     <div class="region-bar">
         <div class="selector-group">
             <label>🌿 Species:</label>
-            <div class="species-dropdown-container">
-                <div class="species-controls">
-                    <select id="speciesSelect" onchange="updateSpeciesInfo()">
-                        <option value="Acacia verticillata"><i>Acacia verticillata</i> (Prickly Moses) — TEST SPECIES</option>
-                        <option value="Acacia dealbata"><i>Acacia dealbata</i> (Silver Wattle)</option>
-                        <option value="Banksia marginata"><i>Banksia marginata</i> (Silver Banksia)</option>
-                        <option value="Leptospermum scoparium"><i>Leptospermum scoparium</i> (Manuka)</option>
-                        <option value="Nothofagus cunninghamii"><i>Nothofagus cunninghamii</i> (Myrtle Beech)</option>
-                    </select>
-                    <button class="add-species-btn" onclick="showAddSpeciesPrompt()">➕ Add Species</button>
-                    <button class="remove-species-btn" onclick="removeCustomSpecies()" id="removeSpeciesBtn" style="display: none;">🗑️ Remove</button>
-                </div>
-                <div class="custom-species-input" id="customSpeciesInput" style="display: none;">
-                    <input type="text" id="newSpeciesName" placeholder="Enter species name (e.g., Eucalyptus globulus)">
-                    <button class="add-species-btn" onclick="addCustomSpecies()">Save</button>
-                    <button class="btn" onclick="cancelAddSpecies()" style="padding: 8px 15px;">Cancel</button>
-                </div>
-            </div>
+            <select id="speciesSelect" onchange="updateSpeciesInfo()">
+                <option value="Acacia verticillata"><i>Acacia verticillata</i> (Prickly Moses) — TEST SPECIES</option>
+                <option value="Acacia dealbata"><i>Acacia dealbata</i> (Silver Wattle)</option>
+                <option value="Banksia marginata"><i>Banksia marginata</i> (Silver Banksia)</option>
+                <option value="Leptospermum scoparium"><i>Leptospermum scoparium</i> (Manuka)</option>
+                <option value="Nothofagus cunninghamii"><i>Nothofagus cunninghamii</i> (Myrtle Beech)</option>
+            </select>
         </div>
         <div class="location-options">
             <label>📍 Quick Region <span class="required-badge">required</span>:</label>
@@ -1497,13 +1451,17 @@
         <!-- WARNINGS PANEL -->
         <div id="warningsPanel" class="warnings-panel" style="display: none;"></div>
 
-        <!-- ACTION BUTTONS -->
+        <!-- ACTION BUTTONS - UPDATED WITH SHARE BUTTON -->
         <div class="action-row">
             <button class="btn" onclick="resetForm()">⟲ Reset</button>
             <button class="btn btn-save" onclick="saveRecord()">💾 Save Record</button>
+            <button class="btn btn-share" onclick="shareData()" id="shareBtn">📱 Share Data</button>
             <button class="btn btn-primary" onclick="exportAllJSON()">📥 Export All as JSON</button>
             <button class="btn btn-excel" onclick="exportAllExcel()">📊 Export All to Excel</button>
             <button class="btn btn-csv" onclick="exportAllCSV()">📄 Export All to CSV</button>
+        </div>
+        <div class="share-note" style="text-align: right; margin-top: -1rem; margin-bottom: 1rem;">
+            📱 Share button works on mobile - send data summaries or app link via email, messages, etc.
         </div>
 
         <!-- RECORDS SECTION -->
@@ -1534,7 +1492,7 @@
 
     <!-- Footer -->
     <div style="background: #1a5830; color: #f6f9ed; padding: 1rem 2.5rem; text-align: center; border-top: 3px solid #f5c542; font-size: 0.9rem; border-radius: 0 0 36px 36px;">
-        <p>🌱 Future Seeds Program · Tasmania · Field Data Collection Tool · Now with Auto Weather! <span class="new-badge">NEW</span></p>
+        <p>🌱 Future Seeds Program · Tasmania · Field Data Collection Tool · Now with Auto Weather & Share! <span class="new-badge">NEW</span></p>
         <p style="font-size: 0.8rem; margin-top: 0.3rem; opacity: 0.8;">Developed by Jay Rowley for TasTAFE Future Seeds Program 2026</p>
     </div>
 </div>
@@ -1546,16 +1504,12 @@
     // Local storage keys
     const STORAGE_KEY = 'futureSeedsRecords';
     const OBSERVER_KEY = 'futureSeedsObserver';
-    const SPECIES_KEY = 'futureSeedsCustomSpecies';
 
     // Load records from localStorage
     let savedRecords = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
     // Load saved observer name
     let savedObserver = localStorage.getItem(OBSERVER_KEY) || '';
-
-    // Load custom species
-    let customSpecies = JSON.parse(localStorage.getItem(SPECIES_KEY)) || [];
 
     // Default species list
     const defaultSpecies = [
@@ -1613,6 +1567,171 @@
     // Initialize map
     let map;
     let marker;
+
+    // ========== NEW SHARE FUNCTIONALITY ==========
+    
+// Main share function - UPDATED with better desktop feedback
+async function shareData() {
+    // Check if Web Share API is supported
+    if (!navigator.share) {
+        // Better desktop fallback - copy to clipboard instead
+        const recordCount = savedRecords.length;
+        const summary = `🌱 Future Seeds Program\n📊 Total Records: ${recordCount}\n🔗 ${window.location.href}`;
+        
+        try {
+            await navigator.clipboard.writeText(summary);
+            alert('📋 Summary copied to clipboard! (Sharing is mobile-only, but you can paste this anywhere)');
+        } catch (clipboardError) {
+            alert('Sharing is only available on mobile devices. Please use the export buttons instead.');
+        }
+        return;
+    }
+    
+    // Rest of the mobile sharing code remains the same...
+    try {
+        // Get a summary of the current data
+        const recordCount = savedRecords.length;
+        const lastRecord = savedRecords.length > 0 ? savedRecords[savedRecords.length - 1] : null;
+        
+        // Create a shareable text summary
+        let shareText = `🌱 Future Seeds Program - Data Summary\n`;
+        shareText += `📊 Total Records: ${recordCount}\n`;
+        
+        if (recordCount > 0) {
+            // Add species breakdown
+            const speciesCount = {};
+            savedRecords.forEach(r => {
+                const species = r.species || 'Unknown';
+                speciesCount[species] = (speciesCount[species] || 0) + 1;
+            });
+            
+            shareText += `🌿 Species recorded:\n`;
+            Object.entries(speciesCount).slice(0, 3).forEach(([species, count]) => {
+                const shortName = species.split(' ').slice(0, 2).join(' ');
+                shareText += `   • ${shortName}: ${count}\n`;
+            });
+            
+            if (Object.keys(speciesCount).length > 3) {
+                shareText += `   • ... and ${Object.keys(speciesCount).length - 3} more\n`;
+            }
+            
+            // Add date range
+            const dates = savedRecords.map(r => r.collectionDate).sort();
+            if (dates.length > 0) {
+                shareText += `📅 Date range: ${dates[0]} to ${dates[dates.length-1]}\n`;
+            }
+            
+            // Add location info
+            const locations = new Set(savedRecords.map(r => r.location?.region).filter(Boolean));
+            if (locations.size > 0) {
+                shareText += `📍 Regions: ${Array.from(locations).join(', ')}\n`;
+            }
+        }
+        
+        shareText += `\n🔗 Open the app: ${window.location.href}`;
+        
+        // Prepare share data
+        const shareData = {
+            title: 'Future Seeds Program Data',
+            text: shareText,
+            url: window.location.href,
+        };
+        
+        // Try to share a file if there are records and we're on a modern browser
+        if (savedRecords.length > 0 && navigator.canShare) {
+            try {
+                // Create a simple JSON export of the last 5 records as a sample
+                const sampleData = savedRecords.slice(-5); // Last 5 records
+                const jsonStr = JSON.stringify(sampleData, null, 2);
+                const file = new File([jsonStr], 'future-seeds-sample.json', { type: 'application/json' });
+                
+                // Check if files can be shared
+                if (navigator.canShare({ files: [file] })) {
+                    shareData.files = [file];
+                }
+            } catch (fileError) {
+                console.log('File sharing not supported, falling back to text only');
+            }
+        }
+        
+        // Trigger the share dialog
+        await navigator.share(shareData);
+        
+        // Success message
+        document.getElementById('outputBox').innerText = '✅ Data shared successfully!';
+        
+    } catch (err) {
+        // User cancelled or sharing failed
+        if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+            document.getElementById('outputBox').innerText = '❌ Sharing failed. Use export buttons instead.';
+        }
+    }
+}
+
+// Share a single record - UPDATED with better desktop feedback
+async function shareSingleRecord(index) {
+    if (!navigator.share) {
+        // Desktop fallback
+        const record = savedRecords[index];
+        if (!record) return;
+        
+        const summary = 
+            `🌱 Future Seeds Record\n` +
+            `📅 Date: ${record.collectionDate}\n` +
+            `👤 Observer: ${record.observer}\n` +
+            `🌿 Species: ${record.species}\n` +
+            `📍 Location: ${record.location?.region || 'Unknown'}\n` +
+            `🔗 ${window.location.href}`;
+        
+        try {
+            await navigator.clipboard.writeText(summary);
+            alert('📋 Record summary copied to clipboard! (Sharing is mobile-only)');
+        } catch (clipboardError) {
+            alert('Sharing is only available on mobile devices.');
+        }
+        return;
+    }
+    
+    // Mobile sharing code remains...
+    const record = savedRecords[index];
+    if (!record) return;
+    
+    try {
+        // Create a readable summary of the record
+        const shareText = 
+            `🌱 Future Seeds Record\n` +
+            `📅 Date: ${record.collectionDate}\n` +
+            `👤 Observer: ${record.observer}\n` +
+            `🌿 Species: ${record.species}\n` +
+            `📍 Location: ${record.location?.region || 'Unknown'}\n` +
+            `📍 Coordinates: ${record.location?.latitude}, ${record.location?.longitude}\n` +
+            `🌼 Flowering: ${Object.entries(record.phenology?.flowering || {})
+                .filter(([_, v]) => v)
+                .map(([k]) => k)
+                .join(', ') || 'None'}\n` +
+            `🐝 Pollinators: ${Object.entries(record.phenology?.pollinators || {})
+                .filter(([_, v]) => v && k !== 'other')
+                .map(([k]) => k)
+                .join(', ') || 'None'}\n` +
+            (record.weather?.minTemp ? `🌡️ Temp: ${record.weather.minTemp}°C - ${record.weather.maxTemp}°C\n` : '') +
+            (record.photos?.length ? `📸 Photos: ${record.photos.length}\n` : '') +
+            `\n🔗 ${window.location.href}`;
+        
+        await navigator.share({
+            title: `Future Seeds: ${record.species}`,
+            text: shareText,
+            url: window.location.href,
+        });
+        
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+        }
+    }
+}
+
+    // ========== END NEW SHARE FUNCTIONALITY ==========
 
     // Weather helper function to get description from WMO code
     function getWeatherDescription(code) {
@@ -1795,98 +1914,6 @@
             option.innerHTML = species.display;
             select.appendChild(option);
         });
-        
-        // Add custom species
-        customSpecies.forEach(species => {
-            const option = document.createElement('option');
-            option.value = species;
-            option.innerHTML = `<i>${species}</i> (Custom)`;
-            select.appendChild(option);
-        });
-        
-        // Show/hide remove button based on whether current selection is custom
-        updateRemoveButtonVisibility();
-    }
-
-    // Update remove button visibility
-    function updateRemoveButtonVisibility() {
-        const select = document.getElementById('speciesSelect');
-        const removeBtn = document.getElementById('removeSpeciesBtn');
-        const currentValue = select.value;
-        
-        if (customSpecies.includes(currentValue)) {
-            removeBtn.style.display = 'inline-block';
-        } else {
-            removeBtn.style.display = 'none';
-        }
-    }
-
-    // Show add species input
-    function showAddSpeciesPrompt() {
-        document.getElementById('customSpeciesInput').style.display = 'flex';
-    }
-
-    // Cancel adding species
-    function cancelAddSpecies() {
-        document.getElementById('customSpeciesInput').style.display = 'none';
-        document.getElementById('newSpeciesName').value = '';
-    }
-
-    // Add custom species
-    function addCustomSpecies() {
-        const newSpecies = document.getElementById('newSpeciesName').value.trim();
-        
-        if (!newSpecies) {
-            alert('Please enter a species name');
-            return;
-        }
-        
-        // Check if species already exists in default or custom
-        const existsInDefault = defaultSpecies.some(s => s.value.toLowerCase() === newSpecies.toLowerCase());
-        const existsInCustom = customSpecies.some(s => s.toLowerCase() === newSpecies.toLowerCase());
-        
-        if (existsInDefault || existsInCustom) {
-            alert('This species already exists in the list');
-            return;
-        }
-        
-        // Add to custom species array
-        customSpecies.push(newSpecies);
-        localStorage.setItem(SPECIES_KEY, JSON.stringify(customSpecies));
-        
-        // Refresh dropdown
-        initializeSpeciesDropdown();
-        
-        // Select the new species
-        document.getElementById('speciesSelect').value = newSpecies;
-        updateSpeciesInfo();
-        
-        // Hide input
-        cancelAddSpecies();
-    }
-
-    // Remove custom species
-    function removeCustomSpecies() {
-        const select = document.getElementById('speciesSelect');
-        const currentValue = select.value;
-        
-        if (!customSpecies.includes(currentValue)) {
-            alert('Only custom species can be removed');
-            return;
-        }
-        
-        if (confirm(`Are you sure you want to remove "${currentValue}" from the species list?`)) {
-            // Remove from custom species array
-            customSpecies = customSpecies.filter(s => s !== currentValue);
-            localStorage.setItem(SPECIES_KEY, JSON.stringify(customSpecies));
-            
-            // Refresh dropdown
-            initializeSpeciesDropdown();
-            
-            // Select first default species
-            select.value = defaultSpecies[0].value;
-            updateSpeciesInfo();
-        }
     }
 
     // Toggle guide
@@ -2139,7 +2166,6 @@
         }
         
         document.getElementById('speciesDisplay').innerHTML = displayName;
-        updateRemoveButtonVisibility();
     }
 
     // Handle Flowering None checkbox
@@ -2505,7 +2531,7 @@
         };
     }
 
-    // Save record - FIXED with quota handling
+    // Save record - with quota handling
     function saveRecord() {
         // Save observer immediately when saving
         const observer = document.getElementById('observer').value.trim();
@@ -2702,7 +2728,7 @@
         reader.readAsText(file);
     }
 
-    // Display records
+    // Display records - UPDATED with share button for individual records
     function displayRecords() {
         const grid = document.getElementById('recordsGrid');
         const countEl = document.getElementById('recordCount');
@@ -2740,6 +2766,7 @@
                         `<div class="record-photo-indicator">📸 ${record.photos.length}</div>` : ''}
                     <div class="record-actions">
                         <button class="record-btn edit" onclick="event.stopPropagation(); editRecord(${savedRecords.indexOf(record)})">✏️ Edit</button>
+                        <button class="record-btn share" onclick="event.stopPropagation(); shareSingleRecord(${savedRecords.indexOf(record)})" style="background: #4a90e2; color: white; border-color: #2a5080;">📱 Share</button>
                         <button class="record-btn delete" onclick="event.stopPropagation(); deleteRecord(${savedRecords.indexOf(record)})">🗑️ Delete</button>
                     </div>
                 </div>
